@@ -1,0 +1,23 @@
+{
+    "name": "aditya/friendswall",
+    "description": "Social network to communicate with friends",
+    "type": "project",
+    "require": {
+        "tonyhhyip/sse": "^2.1"
+    },
+    "require-dev": {
+        "apigen/apigen": "^4.1"
+    },
+    "license": "GNU General Public License 3.0",
+    "authors": [
+        {
+            "name": "Aditya Nathwani",
+            "email": "adityanathwani@gmail.com"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "FriendsWall\\": "src/"
+        }
+    }
+}

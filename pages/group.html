@@ -1,0 +1,458 @@
+<div id="group_loader" style="text-align: center;" class="w3-padding">
+    <span class="fas fa-spin fa-spinner w3-large"></span><br />
+    loading
+</div>
+<div id="group_main" class="w3-padding-small w3-padding-top" style="margin: auto;display: none;">
+    <div class="w3-center" style="max-width: 100%;width: 600px;margin-left: auto;margin-right: auto;">
+        <img src="api/media/dp/group.jpg" style="height: 125px;width:125px; vertical-align: text-top" class="w3-circle" alt="Group Picture" id="group_dp" />
+        <button class="w3-button w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="$('#group_file').click();" style="position: absolute;"><span class="fas fa-upload"></span></button>
+    </div>
+    <input type="file" style="display: none" id="group_file" onchange="changeGroupDp();" />
+    <div class="w3-center w3-padding-small" style="max-width: 100%;width: 600px;margin: auto;">
+        <span style="display: inline-block" class="background w3-padding-small w3-card-2 w3-margin border-bottom" id="group_full_name"></span>
+    </div>
+    <div class="background w3-padding-small border-bottom w3-card-2 w3-center" style="max-width: 100%;width: 600px;margin-left: auto;margin-right: auto;display: none;word-break: break-all;" id="group_description"></div>
+    <div style="text-align: right;padding-right: 16px;overflow-x: auto;white-space: nowrap;">
+        <button class="w3-button w3-red w3-hover-red w3-margin" data-ripple="rgba(255,255,255,1)" onclick="leave_group();" style="margin-right: 0px !important;"><span class="fas fa-sign-out-alt"></span> Leave Group</button>
+        <button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="loadTmpPage('group_members');" style="margin-right: 0px !important;"><span class="fas fa-users-cog"></span> Members</button>
+        <button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="loadTmpPage('group_edit');" style="margin-right: 0px !important;display: none;" id="group_edit"><span class="fas fa-cog"></span> Edit group</button>
+    </div>
+    <hr />
+    <div class="w3-card-2 border-bottom" style="margin: 8px;">
+        <div class="w3-container w3-black"><h3>Add post</h3></div>
+        <form class="w3-padding-small border-bottom background" onsubmit="add_group_post(event);" id="group_add_post_form">
+            <textarea class="w3-input" id="group_post_text" placeholder="What's happening?" style="max-width: 100%;"></textarea>
+            <div style="text-align: right;margin-top: 4px;">
+                <input type="file" name="file" id="group_post_file" style="display: none;" onchange="group_update_file_name();" />
+                <button type="button" class="w3-button w3-transparent w3-hover-none" style="display: none;cursor: default;" id="group_post_file_name"></button>
+                <button type="button" class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="$('#group_post_file').click();"><span class="fas fa-image"></span></button>
+                <button type="submit" class="w3-button w3-blue w3-hover-blue" data-ripple="rgba(0,0,0,1)" id="group_post_submit">Post</button>
+                <button type="button" class="w3-button w3-transparent w3-hover-none" style="display: none;cursor: default;" id="group_post_loader"><span class="fas fa-spinner fa-spin"></span></button>
+            </div>
+        </form>
+    </div>
+    <hr />
+    <div id="group_posts"></div>
+    <div id="group_posts_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="group_post_page++;group_posts_update(true);">load more posts</div>
+    <div class="w3-margin-top w3-center" id="group_posts_loader">
+        <span class="fas fa-spin fa-spinner"></span><br />
+        Loading
+    </div>
+</div>
+<div class="w3-margin-top background border-bottom w3-card-2 post-container" style="margin: 8px;display: none;" id="group_post_prototype">
+    <div class="post-header w3-cell-row w3-border-bottom">
+        <div class="w3-cell w3-cell-middle w3-padding-small" style="text-align: left;"><img src="" style="height: 35px;width: 35px;vertical-align: middle;margin: 0px;" alt="group picture" class="w3-circle post_image dp" />&nbsp;&nbsp;<a href="" class="link post_link full_name"></a></div>
+        <div class="w3-cell w3-cell-middle" style="text-align: right;"><span class="w3-text-gray post_time"></span><button class="w3-button w3-transparent w3-hover-none post_delete" data-ripple="rgba(0,0,0,1)"><span class="fa fa-trash"></span></button></div>
+    </div>
+    <div class="post-content w3-padding" style="word-wrap: break-word;white-space: pre-wrap;"></div>
+    <div class="w3-row w3-border-bottom">
+        <div class="w3-padding w3-col s6" style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_likes"></a></div>
+        <div class="w3-padding w3-col s6"  style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_comments"></a></div>
+    </div>
+    <div class="w3-row">
+        <div class="w3-padding w3-col s6 post_like w3-border-right" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-thumbs-up"></span> Like</div>
+        <div class="w3-padding w3-col s6 post_comments" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-comments"></span> Comment</div>
+    </div>
+</div>
+<script>
+    var group_id = window.location.hash.split("/")[1];
+    var group_dp_id;
+    var group_admin;
+    var group_name;
+    var group_description = '';
+    
+    var group_posts = $("#group_posts");
+    var group_post_prototype = $("#group_post_prototype");
+    var group_posts_load_more = $("#group_posts_load_more");
+    var group_post_page = 1;
+    function changeGroupDp() {
+        loadPage('loader');
+        var fd = new FormData();
+        fd.append('file', document.getElementById('group_file').files[0]);
+        fd.append('gid', group_id);
+        $.ajax({
+            url: base_url + '/group/uploaddp.php',
+            type: 'POST',
+            data: fd,
+            success: function(data){
+                if (data.success) {
+                    loadTmpPage('change_group_picture');
+                    group_dp_id = data.data.gid;
+                } else if(data.logout) {
+                    loadPage('logout');
+                } else if (data.error) {
+                    toast(data.error, 2000);
+                    loadPage('profile');
+                } else {
+                    toast('Unknown error occured');
+                    loadPage('groups');
+                }
+            },
+            fail: function() {
+                toast('Unknown error occured');
+                loadPage('groups');
+            },
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    }
+    function leave_group() {
+        $.post(base_url + '/group/members/remove.php', {'gid': group_id, 'uid': userinfo['id']})
+                .done(function (data) {
+                    if (data.success) {
+                        loadPage('groups');
+                    } else if (data.error) {
+                        toast(data.error);
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    $.post(base_url + "/group/get.php", {'id': group_id})
+            .done(function (data) {
+                if (data.success) {
+                    if (data.data.group.isadmin) {
+                        group_admin = true;
+                        $("#group_edit").show();
+                    }
+                    if (data.data.group.dp) {
+                        $("#group_dp").attr('src', base_site_url + '/api/media/' + data.data.group.media + '/' + data.data.group.dp + '.jpg');
+                    }
+                    $("#group_full_name").text(data.data.group.name);
+                    group_name = data.data.group.name;
+                    if (data.data.group.description) {
+                        $("#group_description").text(data.data.group.description).show();
+                        group_description = data.data.group.description;
+                    }
+                    $("#group_loader, #group_main").toggle();
+                    group_posts_update();
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                    loadPage("group");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    loadPage("group");
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                loadPage("group");
+            });
+    function add_group_post(event) {
+        event.preventDefault();
+        toast('Posting...', 1500);
+        $("#group_post_loader").show();
+        $("#group_post_submit").hide();
+        var fd = new FormData();
+        if (document.getElementById('group_post_file').files[0]) {
+            fd.append('file', document.getElementById('group_post_file').files[0]);
+        }
+        fd.append('text', document.getElementById('group_post_text').value);
+        fd.append('gid', group_id);
+        $.ajax({
+            url: base_url + '/post/add.php',
+            type: 'POST',
+            data: fd,
+            success: function(data){
+                if (data.success) {
+                    toast("post added", 2000);
+                    reloadPage('group/'+group_id);
+                } else if(data.logout) {
+                    loadPage('logout');
+                } else if (data.error) {
+                    toast(data.error, 2000);
+                    $("#group_post_loader").hide();
+                    $("#group_post_submit").show();
+                } else {
+                    toast('Unknown error occured');
+                    $("#group_post_loader").hide();
+                    $("#group_post_submit").show();
+                }
+            },
+            fail: function() {
+                toast('Unknown error occured');
+                $("#group_post_loader").hide();
+                $("#group_post_submit").show();
+            },
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    }
+    function delete_group_post(id, elm) {
+        toast('Deleting...', 1500);
+        $.post(base_url + "/post/delete.php", {'id': id})
+                .done(function (data) {
+                    if (data.success) {
+                        $(elm).parents('.post-container').remove();
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function update_file_name() {
+        $("#group_post_file_name").text(document.getElementById('group_post_file').files[0].name).show();
+    }
+    function group_posts_update(load_more) {
+        $.post(base_url + "/walls/getWall.php", {'page': group_post_page, 'gid': group_id})
+                .done(function (data) {
+                    if (data.success) {
+                        if (!load_more) {
+                            group_posts.html('<div class="w3-right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast(\'Refreshing...\', 2000);group_post_page=1;group_posts_update();"><span class="fa fa-sync"></span> Refresh</button></div><h2 class="w3-center">Posts</h2>');
+                        }
+                        $("#group_posts_loader").hide();
+                        var tData = data.data.result.posts;
+                        var tUsers = data.data.result.users;
+                        if (tData === null) {
+                            if (group_post_page === 1) {
+                                group_posts.append('<div class="w3-center background w3-margin w3-padding">No posts</div>');
+                            } else {
+                                alert('No more posts to display', 2000);
+                            }
+                            group_posts_load_more.hide();
+                            return;
+                        }
+                        if (tData.length < 20) {
+                            group_posts_load_more.hide();
+                        } else {
+                            group_posts_load_more.show();
+                        }
+                        for (var i=0; i<tData.length; i++) {
+                            var tElm = group_post_prototype.clone().removeAttr('id').css('display', 'block');
+                            tElm.find('.post-content').text(tData[i].text);
+                            tElm.find('.post_link').attr('href', '#user/' + tUsers[tData[i].uid].username).text(tUsers[tData[i].uid].first_name + ' ' + tUsers[tData[i].uid].last_name);
+                            if (tUsers[tData[i].uid].dp) {
+                                tElm.find('.post_image').attr("src", base_site_url + "/api/media/" + tUsers[tData[i].uid].media + "/" + tUsers[tData[i].uid].dp + ".jpg");
+                            } else {
+                                tElm.find('.post_image').attr("src", base_site_url + "/api/media/dp/default.jpg");
+                            }
+                            if (tData[i].media) {
+                                tElm.find('.post-content').append('<div class="w3-center"><' + ((tData[i].media.substring(8) === '.jpg')? 'img' : 'video controls') + ' src="' + base_site_url + '/api/media/' + tUsers[tData[i].uid].media + '/' + tData[i].media + '" class="post-image-width" /></div>');
+                            }
+                            tElm.find('.post_time').text(tData[i].timeago);
+                            tElm.find('.post_like')
+                                    .attr('id', 'group_post_like_'+tData[i].id)
+                                    .attr('onclick', 'group_toggleLike('+tData[i].id+')')
+                                    .addClass(tData[i].isLiked ? 'w3-text-blue' : '');
+                            tElm.find('.post_comments')
+                                    .attr('onclick', 'group_show_comments('+tData[i].id+')');
+                            tElm.find('.post_no_likes')
+                                    .attr('id', 'group_posts_no_likes_'+tData[i].id)
+                                    .attr('onclick', 'group_show_likes('+tData[i].id+');')
+                                    .text(tData[i].totalLikes + ' Likes');
+                            tElm.find('.post_no_comments')
+                                    .attr('id', 'group_posts_no_comments_'+tData[i].id)
+                                    .attr('onclick', 'group_show_comments('+tData[i].id+');')
+                                    .text(tData[i].totalComments + ' Comments');
+                            if (parseInt(tData[i].uid) !== userinfo['id'] && !group_admin) {
+                                tElm.find('.post_delete').hide();
+                            } else {
+                                tElm.find('.post_delete').attr('onclick', 'delete_group_post(' + tData[i].id + ', this);');
+                            }
+                            tElm.appendTo(group_posts);
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        $("#group_posts_loader").hide();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#group_posts_loader").hide();
+                });
+    }
+    function group_toggleLike(id) {
+        $("#group_post_like_" + id).toggleClass('w3-text-blue');
+        $.post(base_url + "/like/toggle_like.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        if (data.data.isLiked) {
+                            $("#group_post_like_" + id).addClass('w3-text-blue');
+                        } else {
+                            $("#group_post_like_" + id).removeClass('w3-text-blue');
+                        }
+                        $("#group_posts_no_likes_" + id).text(data.data.totalLikes + ' Likes');
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function group_show_likes(id) {
+        var clone = windowDiv.clone().attr('id', 'group_likes_window');
+        clone.find(".window-title").text("Likes");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/like/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var likesWindow = $("#group_likes_window");
+                        likesWindow.find('.window-title').text("Likes(" + data.data.totalLikes + ")").css({'margin':'8px', 'margin-left': '0px'});
+                        likesWindow.find('.window-header').css({'position':'absolute', width: likesWindow.find('.window-content').css('width')}).addClass('background-image');
+                        var likes_result = likesWindow.find('.window-main');
+                        likes_result.css('margin-top', likesWindow.find('.window-header').height());
+                        likes_result.empty();
+                        for (var i=0; i<data.data.likes.length; i++) {
+                            if (data.data.likes[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.likes[i].media + '/' + data.data.likes[i].dp + '.jpg';
+                            }
+                            likes_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.likes[i].username + '" onclick="$(\'#group_likes_window\').remove();" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.likes[i].first_name + ' ' + data.data.likes[i].last_name + '</a></div>');
+                        }
+                        if(data.data.likes.length === 0) {
+                            likes_result.html('<div class="w3-red w3-center w3-padding">No likes</div>');
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function group_comment(id, text) {
+        $("#group_comment_textarea").val('');
+        $.post(base_url + "/comment/comment.php", {'pid': id, 'text': text})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#group_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")");
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#group_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="group_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="group_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="group_comment('+id+', $(\'#group_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#group_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#group_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function group_show_comments(id) {
+        var clone = windowDiv.clone().removeClass("w3-animate-zoom").attr('id', 'group_comments_window');
+        clone.find(".window-title").text("Comments");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/comment/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#group_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")").css({'margin':'8px', 'margin-left': '0px'});
+                        commentsWindow.find('.window-header').css({'position':'absolute', width: commentsWindow.find('.window-content').css('width')}).addClass('background-image');
+                        
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.css('margin-top', commentsWindow.find('.window-header').height());
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#group_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="group_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="group_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="group_comment('+id+', $(\'#group_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#group_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#group_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }            
+</script>

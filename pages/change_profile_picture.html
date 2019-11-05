@@ -1,0 +1,73 @@
+<div class="background" style="min-height: 90vh;">
+    <div>
+        <button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="loadPage('profile')"><span class="fas fa-arrow-left"></span></button>
+    </div>
+    <div id="change_profile_picture_loader" style="text-align: center;">
+        <span class="fas fa-spin fa-spinner w3-large"></span><br />
+        loading
+    </div>
+    <div style="max-width: 256px;margin: auto;display: none;text-align: center;" id="cropprc">
+        <img src="" style="width: 100%;" alt="profile picture" id="croppr">
+        <br />
+        <button class="w3-button w3-black w3-hover-black" data-ripple="rgba(255, 255, 255, 1)" onclick="crop();">Crop</button>
+    </div>
+</div>
+<script>
+    var croppr;
+    $("#croppr")
+            .attr("src", "api/v1/profile/getdp.php?r=" + Math.random())
+            .get(0).onload = (function() {
+                $.getScript("js/croppr.min.js", function() {
+                    $("#cropcss").remove();
+                    document.head.insertAdjacentHTML('beforeend', '<link href="css/croppr.min.css" rel="stylesheet" id="cropcss"/>');
+                    $("#cropcss").get(0).onload = (function() {
+                        croppr = new Croppr(document.getElementById('croppr'), {
+                            aspectRatio: 1,
+                            onInitialize: function(instance){
+                                setTimeout(function() {
+                                    $("#change_profile_picture_loader").hide();
+                                    $("#cropprc").show();
+                                    var tWidth = $("#cropprc .croppr-image").width();
+                                    var tHeight = $("#cropprc .croppr-image").height();
+                                    if(tWidth > tHeight) {
+                                        instance.resizeTo(tHeight, tHeight, [0,0]);
+                                    } else {
+                                        instance.resizeTo(tWidth, tWidth, [0,0]);
+                                    }
+                                }, 500);
+                            }
+                        });
+                    });
+                });
+            });
+    function crop() {
+        var cropValue = croppr.getValue();
+        loadPage('loader');
+        $.post(base_url + '/profile/uploaddp.php', {"imgdata":cropValue})
+                .done(function (data) {
+                    if (data.success) {
+                        userinfo["dp"] = data.data.dp;
+                        updateDP();
+                        loadPage('profile');
+                    } else if (data.error) {
+                        toast(data.error, 3000);
+                        if (data.logout) {
+                            loadPage('logout');
+                        } else {    
+                            loadPage('profile');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.", 3000);
+                        loadPage('profile');
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.", 3000);
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.", 3000);
+                    }
+                    loadPage('profile');
+                });
+    }
+</script>

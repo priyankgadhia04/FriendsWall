@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2019 Aditya Nathwani <adityanathwani@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script>
+            if (!localStorage.loggedIn) {
+                window.location.href = 'login.html' + window.location.hash;
+            }
+        </script>
+        <title>Home - Friends' Wall Social Network</title>
+        <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+        <meta name="theme-color" content="#000000" />
+        <link rel="stylesheet" type="text/css" href="css/w3.css" />
+        <link rel="stylesheet" type="text/css" href="css/custom.css" />
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+    </head>
+    <body style="background-image: url('img/bg.jpg');background-attachment: fixed;background-size: cover;">
+        <div class="w3-sidebar w3-bar-block w3-animate-left w3-collapse w3-border-right background-light" style="display:none;" id="leftMenu">
+            <div class="w3-center w3-border-top w3-padding"><img src="api/media/dp/default.jpg" height="125" width="125" alt="Profile Picture" class="dp w3-circle w3-border" /></div>
+            <a class="w3-bar-item w3-button w3-border-bottom w3-center full_name" href="#profile" id="itemprofile">Profile</a>
+            <a class="w3-bar-item w3-button" href="#walls" id="itemwalls"><span class="fas fa-newspaper"></span> Walls</a>
+            <a class="w3-bar-item w3-button" href="#friends" id="itemfriends"><span class="fas fa-user-friends"></span> Friends</a>
+            <a class="w3-bar-item w3-button" href="#messages" id="itemmessages"><span class="fas fa-envelope"></span> Messages</a>
+            <a class="w3-bar-item w3-button" href="#groups" id="itemgroups"><span class="fas fa-users"></span> Groups</a>
+            <a class="w3-bar-item w3-button" href="#search" id="itemsearch"><span class="fas fa-search"></span> Search</a>
+            <a class="w3-bar-item w3-button" href="#logout" id="itemlogout"><span class="fas fa-sign-out-alt"></span> Logout</a>
+        </div>
+
+        <div class="w3-sidebar w3-bar-block w3-animate-right w3-collapse w3-border-left" style="display:none;right:0;" id="rightMenu">
+            <div class="w3-row w3-border-top" id="notificationButtons">
+                <button id="shortcut_requests" onclick="showShortcut('requests');" class="w3-col w3-button s4 w3-hover-text-red" data-ripple="rgba(0, 0, 0, 1)"><span class="fas fa-user-clock"></span><span style="position: absolute;top: 0;display: none;" class="w3-badge w3-small" id="no_requests">0</span></button>
+                <button id="shortcut_messages" onclick="showShortcut('messages');" class="w3-col w3-button s4 w3-hover-text-blue" data-ripple="rgba(0, 0, 0, 1)"><span class="fas fa-comment-alt"></span><span style="position: absolute;top: 0;display: none;" class="w3-badge w3-small" id="no_messages">0</span></button>
+                <button id="shortcut_notifications" onclick="showShortcut('notifications');read_notifications();" class="w3-col w3-button s4 w3-hover-text-green" data-ripple="rgba(0, 0, 0, 1)"><span class="fas fa-bell"></span><span style="position: absolute;top: 0;display: none;" class="w3-badge w3-small" id="no_notifications">0</span></button>
+            </div>
+            <div id="shortcutc_requests" style="display:none;"><small class="w3-text-grey">Requests</small>
+                <div id="shortcut_content_requests">
+                    <div id="shortcut_requests_list"></div>
+                    <div id="shortcut_requests_prototype" style="display: none;" class="w3-small w3-padding-small w3-border-bottom w3-cell-row">
+                        <div class="w3-cell-middle w3-cell"><img class="request_dp w3-circle w3-border" style="height: 50px;width: 50px;" alt="profile picture" src="" /></div>
+                        <div class="w3-cell w3-padding-small">
+                            <p><a class="request_name link"></a></p>
+                            <div class="w3-cell-row">
+                                <div class="w3-cell w3-center"><button class="w3-button w3-blue w3-hover-blue w3-tiny w3-block request_accept" data-ripple="rgba(0, 0, 0, 1)"><span class="fas fa-check"></span></button></div>
+                                <div class="w3-cell s6 w3-center"><button class="w3-button w3-red w3-hover-red w3-tiny w3-block request_reject" data-ripple="rgba(0, 0, 0, 1)"><span class="fas fa-times"></span></button></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="shortcutc_messages" style="display:none;"><small class="w3-text-grey">Messages</small>
+                <div id="shortcut_content_messages">
+                    <div id="shortcut_messages_list"></div>
+                    <div id="shortcut_messages_prototype" data-ripple="rgba(0,0,0,1)" class="w3-small w3-padding-small w3-border-bottom" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;display: none;">
+                        <img alt="profile picture" src="" class="w3-circle w3-border w3-left messages_dp" style="display:inline-block;margin-right:8px;margin-bottom: 0;" width="50" height="50"><a class="messages_name link"></a><br class="" /><span class="messages_text"></span>
+                        <div class="w3-right messages_time w3-tiny"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="shortcutc_notifications" style="display:none;"><small class="w3-text-grey">Notifications</small>
+                <div id="shortcut_content_notifications">
+                    <div id="shortcut_notifications_list"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="w3-main w3-white w3-border-bottom" style="opacity: 0.7;margin-left:200px;margin-right:200px;" id="main">
+            <div class="w3-cell-row">
+                <div class="w3-cell w3-hide-large" style="text-align: left">
+                    <button onclick="toggleMenu('left');" class="w3-button w3-large w3-hover-none" data-ripple="rgba(0, 0, 0, 1)" style="border-bottom-left-radius: 0;border-bottom-right-radius: 0;" id="leftMenuOpener"><span class="fas fa-bars">&nbsp;</span></button>
+                </div>
+                <div class="w3-cell w3-cell-middle w3-xlarge" style="text-align: center;text-transform: capitalize;" id="heading">Friends' Wall</div>
+                <div class="w3-cell w3-hide-large" style="text-align: right">
+                    <button onclick="toggleMenu('right');" class="w3-button w3-large w3-hover-none" data-ripple="rgba(0, 0, 0, 1)" style="border-bottom-left-radius: 0;border-bottom-right-radius: 0;"><span class="fas fa-bell">&nbsp;</span></button><span style="position: absolute;top: 0;right: 0;display: none;" class="w3-badge w3-small w3-red" id="no_all">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="w3-main" style="margin-left:200px;margin-right:200px;min-height: 80vh;" id="content">
+            <div id="pageloader" class="w3-center w3-margin-top"><span class="fas fa-spinner fa-spin w3-xlarge"></span><br>Loading</div>
+        </div>
+        
+        <div id="size" style="display: none;position: fixed;top: 0;left: 0;height: 100%;width: 100%;"></div>
+
+        <div class="toast w3-card w3-animate-bottom" style="position: fixed;font-size: 1.2em;display: none;height: 2.5em;line-height: 2.5em;background-color: #323232;color: #d1d1d1;opacity: .9;top: 2%;right: 45%;padding-left: 8px;padding-right: 8px;z-index: 999;"></div>
+
+        <div class="window" style="display: none;" id="window">
+            <div class="window-content">
+                <div class="w3-bar w3-border-bottom window-header">
+                    <div class="w3-left w3-container">
+                        <p class="window-title" style="font-weight: bold;"></p>
+                    </div>
+                    <div class="w3-right">
+                        <button onclick="$(this).parents('.window').remove();" class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)"><span class="fas fa-times"></span></button>
+                    </div>  
+                </div>
+                <div class="window-main w3-padding-small"><div class="w3-center"><span class="fas fa-spin fa-spinner w3-xlarge"></span><br />Loading</div></div>
+            </div>
+        </div>
+
+        <script type="text/javascript" src="js/fontawesome-all.min.js"></script>
+        <script type="text/javascript" src="js/custom.js"></script>
+        <script>
+            var menu = {'left': $('#leftMenu'), 'right': $('#rightMenu')};
+            var content = $("#content");
+            var heading = $("#heading");
+            var size = $("#size");
+            var store = {};
+            var loadedPages = {};
+            loadedPages["loader"] = true;
+            var leftMenuButtons = $('#leftMenu a');
+            var userinfo;
+            var titlePrefix = " - Friends' Wall Social Network";
+            var title = $("title");
+            var windowDiv = $("#window");
+            var shortcuts = {
+                'requests': $("#shortcut_requests"),
+                'messages': $("#shortcut_messages"),
+                'notifications': $("#shortcut_notifications")
+            };
+            var shortcutsc = {
+                'requests': $("#shortcutc_requests"),
+                'messages': $("#shortcutc_messages"),
+                'notifications': $("#shortcutc_notifications")
+            };
+            var shortcut_requests_prototype = $("#shortcut_requests_prototype");
+            var shortcut_requests_list = $("#shortcut_requests_list");
+            var no_requests = $("#no_requests");
+            var shortcut_messages_prototype = $("#shortcut_messages_prototype");
+            var shortcut_messages_list = $("#shortcut_messages_list");
+            var no_messages = $("#no_messages");
+            var shortcut_notifications_prototype = $("#shortcut_notifications_prototype");
+            var shortcut_notifications_list = $("#shortcut_notifications_list");
+            var no_notifications = $("#no_notifications");
+            
+            var no_all = $("#no_all");
+            
+            var current_notifications = [];
+            
+            function showShortcut(shortcutName) {
+                shortcuts['requests'].removeClass("w3-red w3-hover-red").addClass("w3-hover-text-red");
+                shortcuts['messages'].removeClass("w3-blue w3-hover-blue").addClass("w3-hover-text-blue");
+                shortcuts['notifications'].removeClass("w3-green w3-hover-green").addClass("w3-hover-text-green");
+                shortcutsc['requests'].hide();
+                shortcutsc['messages'].hide();
+                shortcutsc['notifications'].hide();
+                switch (shortcutName) {
+                    case 'requests':
+                        shortcutsc['requests'].show();
+                        shortcuts['requests'].addClass("w3-red w3-hover-red").removeClass("w3-hover-text-red");
+                        break;
+
+                    case 'messages':
+                        shortcutsc['messages'].show();
+                        shortcuts['messages'].addClass("w3-blue w3-hover-blue").removeClass("w3-hover-text-blue");
+                        break;
+
+                    case 'notifications':
+                        shortcutsc['notifications'].show();
+                        shortcuts['notifications'].addClass("w3-green w3-hover-green").removeClass("w3-hover-text-green");
+                        break;
+                }
+            }
+            function closeMenus() {
+                menu['right'].hide();
+                menu['left'].hide();
+                content.off("touchstart");
+            }
+            function toggleMenu(side) {
+                if (side === 'left') {
+                    menu['right'].hide();
+                } else {
+                    menu['left'].hide();
+                }
+                if (menu[side].css("display") === "block") {
+                    menu[side].hide();
+                    content.off("touchstart");
+                } else {
+                    menu[side].show();
+                    content.on("touchstart", closeMenus);
+                }
+            }
+            $(function () {
+                var mainHeight = $('#main').height();
+                $('.w3-sidebar').css('margin-top', mainHeight).css('padding-top', mainHeight);
+                $("#notificationButtons").css("margin-top", (mainHeight * (-1)));
+                $("#shortcutc_messages, #shortcutc_notifications, #shortcutc_requests").css('padding-bottom', mainHeight);
+                $(window).resize(function () {
+                    var tMainHeight = $('#main').height();
+                    $('.w3-sidebar').css('margin-top', tMainHeight).css('padding-top', tMainHeight);
+                    $("#notificationButtons").css("margin-top", (tMainHeight * (-1)));
+                    $("#shortcutc_messages, #shortcutc_notifications, #shortcutc_requests").css('padding-bottom', tMainHeight);
+                });
+                loadPage('loader');
+                window.onhashchange = function() {
+                    if(window.location.hash.split("/").length > 1) {
+                        loadTmpPage(window.location.hash.substring(1));
+                    } else {
+                        loadPage(window.location.hash.substring(1));
+                    }
+                };
+                $.post(base_url + "/home.php")
+                        .done(function (data) {
+                            if (data.success) {
+                                userinfo = data.data.user;
+                                if (window.location.hash) {
+                                    loadPage(window.location.hash.substring(1));
+                                } else {
+                                    loadPage('walls');
+                                }
+                                updateProfile();
+                                updateDP();
+                                var sse = new EventSource(base_url + '/sse.php', { 'withCredentials': true });
+                                sse.addEventListener('requestInfo',function(e){
+                                    var tData = JSON.parse(e.data);
+                                    var load_more = 0;
+                                    shortcut_requests_list.empty();
+                                    for (var i=0; i<tData.length; i++) {
+                                        var tElm = shortcut_requests_prototype.clone().removeAttr('id').css('display', 'block');
+                                        tElm.find('.request_name').attr('href', '#user/'+tData[i].username).text(tData[i].first_name + ' ' + tData[i].last_name);
+                                        if(tData[i].dp) {
+                                            tElm.find('img').attr('src', base_site_url + '/api/media/' + tData[i].media + '/' + tData[i].dp + '.jpg');
+                                        } else {
+                                            tElm.find('img').attr('src', base_site_url + '/api/media/dp/default.jpg');
+                                        }
+                                        tElm.find('.request_accept').attr("id", "acp"+tData[i].id).click(function() {
+                                            friendRequest('accept', $(this).attr("id").substring(3));
+                                        });
+                                        tElm.find('.request_reject').attr("id", "rej"+tData[i].id).click(function() {
+                                            friendRequest('reject', $(this).attr("id").substring(3));
+                                        });
+                                        tElm.appendTo(shortcut_requests_list);
+                                        load_more++;
+                                    }
+                                    if (load_more >= 10) {
+                                        shortcut_requests_list.append('<div style="margin:8px;background-color:rgba(239, 239, 234, 1) !important;cursor:pointer;" class="border-bottom w3-padding-small w3-center" data-ripple="rgba(0,0,0,1)" onclick="loadPage(\'requests\');">See all</div>');
+                                    }
+                                    no_requests.text(tData.length);
+                                    if (tData.length) {
+                                        no_requests.show();
+                                    } else {
+                                        no_requests.hide();
+                                        shortcut_requests_list.html('<div class="w3-center w3-container w3-red" style="margin:4px;">No Requests</div>');
+                                    }
+                                    update_shortcut_numbers();
+                                },false);
+                                sse.addEventListener('messagesInfo',function(e){
+                                    var tData = JSON.parse(e.data);
+                                    var chats_added = {};
+                                    var chats_total = 0;
+                                    var load_more = 0;
+                                    shortcut_messages_list.empty();
+                                    for (var i=0; i<tData.chats.length; i++) {
+                                        var tElm = shortcut_messages_prototype.clone().removeAttr('id').css('display', 'block');
+                                        var sender_indicator = '';
+                                        var issender = false;
+                                        if (parseInt(tData.chats[i].sender) === userinfo['id']) {
+                                            issender = true;
+                                            sender_indicator = 'you: ';
+                                        }
+                                        var did = issender ? tData.chats[i].receiver : tData.chats[i].sender;
+                                        if (chats_added[tData.users[did].id] === true) {
+                                            continue;
+                                        } else {
+                                            chats_added[tData.users[did].id] = true;
+                                            load_more++;
+                                        }
+                                        if (tData.users[did].dp === '') {
+                                            url = base_site_url + '/api/media/dp/default.jpg';
+                                        } else {
+                                            url = base_site_url + '/api/media/' + tData.users[did].media + '/' + tData.users[did].dp + '.jpg';
+                                        }
+                                        tElm.find('.messages_dp').attr('src', url);
+                                        tElm.find('.messages_name')
+                                                .text(tData.users[did].first_name + ' ' + tData.users[did].last_name)
+                                                .attr('onclick', 'event.stopPropagation();window.location.href = \'#user/' + tData.users[did].username + '\';')
+                                                .attr('href', '#user/' + tData.users[did].username);
+                                        tElm.find('.messages_text').text(sender_indicator + tData.chats[i].text);
+                                        tElm.attr('onclick', "window.location.href='#chat/"+tData.users[did].username+"';");
+                                        tElm.find('.messages_time').text((new Date(tData.chats[i].time)).toLocaleTimeString());
+                                        tElm.appendTo(shortcut_messages_list);
+                                        if (parseInt(tData.chats[i].isread) === 0 && !issender) {
+                                            chats_total++;
+                                            tElm.css('font-weight', 'bold');
+                                        }
+                                    }
+                                    if (load_more >= 10) {
+                                        shortcut_messages_list.append('<div style="margin:8px;background-color:rgba(239, 239, 234, 1) !important;cursor:pointer;" class="border-bottom w3-padding-small w3-center" data-ripple="rgba(0,0,0,1)" onclick="loadPage(\'messages\');">See all</div>');
+                                    }
+                                    no_messages.text(chats_total);
+                                    if (tData.chats.length) {
+                                        if (chats_total) {
+                                            no_messages.show();
+                                        } else {
+                                            no_messages.hide();
+                                        }
+                                    } else {
+                                        no_messages.hide();
+                                        shortcut_messages_list.html('<div class="w3-center w3-container w3-red" style="margin:4px;">No Messages</div>');
+                                    }
+                                    update_shortcut_numbers();
+                                    if (typeof chats_load !== 'undefined') {
+                                        chats_page=1;
+                                        chats_load();
+                                    }
+                                },false);
+                                sse.addEventListener('notificationInfo',function(e){
+                                    var tData = JSON.parse(e.data);
+                                    var notifications_total = 0;
+                                    var load_more = 0;
+                                    current_notifications = [];
+                                    shortcut_notifications_list.empty();
+                                    for (var i=0; i<tData.notifications.length; i++) {
+                                        var tData2 = tData.notifications[i];
+                                        switch (parseInt(tData2.type)) {
+                                            case 1: //COMMENTS
+                                                var url;
+                                                if (tData2.user.dp === '') {
+                                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                                } else {
+                                                    url = base_site_url + '/api/media/' + tData2.user.media + '/' + tData2.user.dp + '.jpg';
+                                                }
+                                                var innerText = $('<div />').text(tData2.text);
+                                                var others = '';
+                                                if (parseInt(tData2.total_comments) > 1) {
+                                                    others = ' and ' + (parseInt(tData2.total_comments) - 1) + ' others commented on your post:';
+                                                } else {
+                                                    others = ' commented on your post:';
+                                                }
+                                                shortcut_notifications_list.append('<div style="padding-top:8px;'+((parseInt(tData2.isread)===0)?'font-weight:bold;':'')+'"><div class="w3-border-bottom w3-block w3-small" data-ripple="rgba(0,0,0,1)" style="padding:8px; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#post/'+tData2.pid+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a class="link" onclick="event.stopPropagation();window.location.href = \'#user/' + tData2.user.username + '\';" href="#user/' + tData2.user.username + '">' + tData2.user.first_name + ' ' + tData2.user.last_name + '</a>'+others+'<br />'+innerText.html()+'<br /><div class="w3-right w3-tiny">'+(new Date(tData2.time)).toLocaleString()+'</div></div></div>');
+                                                break;
+                                            case 2: //FRIENDS
+                                                var url;
+                                                if (tData2.user.dp === '') {
+                                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                                } else {
+                                                    url = base_site_url + '/api/media/' + tData2.user.media + '/' + tData2.user.dp + '.jpg';
+                                                }
+                                                shortcut_notifications_list.append('<div style="padding-top:8px;'+((parseInt(tData2.isread)===0)?'font-weight:bold;':'')+'"><div class="w3-border-bottom w3-block w3-small" data-ripple="rgba(0,0,0,1)" style="padding:8px; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#user/'+tData2.user.username+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="display:inline-block;margin-right:8px;vertical-align:middle;" />' + tData2.user.first_name + ' ' + tData2.user.last_name + ' accepted your friend request.<br /><div class="w3-right w3-tiny">'+(new Date(tData2.time)).toLocaleString()+'</div></div></div>');
+                                                break;
+                                            case 3: //GROUP
+                                                var url;
+                                                if (tData2.group.dp === '') {
+                                                    url = base_site_url + '/api/media/dp/group.jpg';
+                                                } else {
+                                                    url = base_site_url + '/api/media/' + tData2.group.media + '/' + tData2.group.dp + '.jpg';
+                                                }
+                                                shortcut_notifications_list.append('<div style="padding-top:8px;'+((parseInt(tData2.isread)===0)?'font-weight:bold;':'')+'"><div class="w3-border-bottom w3-block w3-small" data-ripple="rgba(0,0,0,1)" style="padding:8px; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#group/'+tData2.group.id+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="display:inline-block;margin-right:8px;vertical-align:middle;" />You were added to the group ' + tData2.group.name + '<br /><div class="w3-right w3-tiny">'+(new Date(tData2.time)).toLocaleString()+'</div></div></div>');
+                                                break;
+                                            case 4: //LIKES
+                                                var url;
+                                                if (tData2.user.dp === '') {
+                                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                                } else {
+                                                    url = base_site_url + '/api/media/' + tData2.user.media + '/' + tData2.user.dp + '.jpg';
+                                                }
+                                                var others = '';
+                                                if (parseInt(tData2.total_likes) > 1) {
+                                                    others = ' and ' + (parseInt(tData2.total_likes) - 1) + ' others liked your post.';
+                                                } else {
+                                                    others = ' liked your post.';
+                                                }
+                                                shortcut_notifications_list.append('<div style="padding-top:8px;'+((parseInt(tData2.isread)===0)?'font-weight:bold;':'')+'"><div class="w3-border-bottom w3-block w3-small" data-ripple="rgba(0,0,0,1)" style="padding:8px; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#post/'+tData2.pid+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a class="link" onclick="event.stopPropagation();window.location.href = \'#user/' + tData2.user.username + '\';" href="#user/' + tData2.user.username + '">' + tData2.user.first_name + ' ' + tData2.user.last_name + '</a>'+others+'<br /><div class="w3-right w3-tiny">'+(new Date(tData2.time)).toLocaleString()+'</div></div></div>');
+                                                break;
+                                        }
+                                        if (parseInt(tData2.isread)===0) {
+                                            notifications_total++;
+                                            current_notifications.push(tData2.id);
+                                        }
+                                    }
+                                    if (load_more >= 10) {
+                                        shortcut_notifications_list.append('<div style="margin:8px;background-color:rgba(239, 239, 234, 1) !important;cursor:pointer;" class="border-bottom w3-padding-small w3-center" data-ripple="rgba(0,0,0,1)" onclick="loadPage(\'notifications\');">See all</div>');
+                                    }
+                                    no_notifications.text(notifications_total);
+                                    if (tData.notifications.length) {
+                                        if (notifications_total) {
+                                            no_notifications.show();
+                                        } else {
+                                            no_notifications.hide();
+                                        }
+                                    } else {
+                                        no_notifications.hide();
+                                        shortcut_notifications_list.html('<div class="w3-center w3-container w3-red" style="margin:4px;">No notifications</div>');
+                                    }
+                                    update_shortcut_numbers();
+                                    if (typeof notifications_load !== 'undefined') {
+                                        notifications_page=1;
+                                        notifications_load();
+                                    }
+                                },false);
+                                showShortcut('requests');
+                            } else if (data.error) {
+                                toast(data.error);
+                                if (data.logout) {
+                                    loadPage('logout');
+                                }
+                            } else {
+                                toast("Unknown error occured. Please contact administrator.");
+                            }
+                        })
+                        .fail(function (error) {
+                            if (error.status === 0) {
+                                toast("Unknown error occured. Make sure you have working internet connection.");
+                            } else {
+                                toast("Unknown error occured. Please contact administrator.");
+                            }
+                        });
+            });
+            function loadPage(fullPage) {
+                if (window.location.hash.substring(1) !== fullPage && fullPage !== 'loader') {
+                    window.location.href = "#" + fullPage;
+                    return;
+                }
+                $(".window").not("#window").remove();
+                var page = fullPage.split('/')[0];
+                closeMenus();
+                leftMenuButtons.removeClass("w3-black w3-hover-black");
+                $("#item" + page).addClass("w3-black w3-hover-black");
+                $(content).children("div").hide();
+                if (page !== 'loader') {
+                    $(heading).text(page);
+                    title.text(page.charAt(0).toUpperCase() + page.slice(1) + titlePrefix);
+                }
+                if (loadedPages[page]) {
+                    $("#page" + page).show();
+                } else {
+                    $(content).children("#pageloader").show();
+                    $('<div />').load("pages/" + page + ".html", function (response, status, xhr) {
+
+                        if (status !== "success" && status !== "notmodified") {
+                            if (xhr.status === 404) {
+                                this.innerHTML = '<div class="w3-center w3-red w3-xlarge w3-margin">Error: 404 requested page not found</div>';
+                            } else {
+                                this.innerHTML = "Error loading " + page;
+                            }
+                        }
+                        loadedPages[page] = true;
+                        $(content).children("#pageloader").hide();
+                    }).attr("id", "page" + page).appendTo(content);
+                }
+            }
+            function loadTmpPage(fullPage) {
+                $(".window").not("#window").remove();
+                var page = fullPage.split('/')[0];
+                closeMenus();
+                $(content).children("div").hide();
+                $(content).children("#pageloader").show();
+                $("#page"+page).remove();
+                $('<div />').load("pages/" + page + ".html", function (response, status) {
+                    if (status !== "success" && status !== "notmodified") {
+                        this.innerHTML = "Error loading " + page;
+                    }
+                    $(content).children("#pageloader").hide();
+                }).attr("id", "page" + page).appendTo(content);
+            }
+            function reloadPage(fullPage) {
+                var page = fullPage.split('/')[0];
+                loadPage('loader');
+                $("#page"+page).remove();
+                loadedPages[page] = false;
+                loadPage(fullPage);
+            }
+            function updateDP() {
+                if(userinfo && userinfo['dp']) {
+                    $(".dp").attr("src", base_site_url + "/api/media/" + userinfo['media'] + "/" + userinfo['dp'] + ".jpg");
+                } else {
+                    $(".dp").attr("src", base_site_url + "/api/media/dp/default.jpg");
+                }
+            }
+            function updateProfile() {
+                if (userinfo && userinfo["first_name"] && userinfo["last_name"]) {
+                    $(".full_name").text(userinfo["first_name"] + " " + userinfo["last_name"]);
+                }
+            }
+            function friendRequest(action, friendID) {
+                $.post(base_url + "/friend.php", {'action': action, 'id': friendID})
+                        .done(function (data) {
+                            if (data.success) {
+                            } else if (data.error) {
+                                toast(data.error);
+                                if (data.logout) {
+                                    loadPage('logout');
+                                }
+                            } else {
+                                toast("Unknown error occured. Please contact administrator.");
+                            }
+                        })
+                        .fail(function (error) {
+                            if (error.status === 0) {
+                                toast("Unknown error occured. Make sure you have working internet connection.");
+                            } else {
+                                toast("Unknown error occured. Please contact administrator.");
+                            }
+                        });
+            }
+            function update_shortcut_numbers() {
+                var tot = parseInt(no_requests.html())+parseInt(no_messages.html())+parseInt(no_notifications.html());
+                if (tot) {
+                    no_all.text(tot).show();
+                } else {
+                    no_all.text(tot).hide();
+                }
+            }
+            function read_notifications() {
+                for (var i = 0; i < current_notifications.length; i++) {
+                    $.post(base_url + "/notification/read.php", {'id': current_notifications[i]});
+                }
+            };
+        </script>
+    </body>
+</html>

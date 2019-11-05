@@ -1,0 +1,390 @@
+<div id="user_loader" style="text-align: center;" class="w3-padding">
+    <span class="fas fa-spin fa-spinner w3-large"></span><br />
+    loading
+</div>
+<div id="user_main" class="w3-padding-small w3-padding-top w3-center" style="margin: auto;display: none;">
+    <div class="w3-center" style="max-width: 100%;width: 600px;margin-left: auto;margin-right: auto;">
+        <img src="api/media/dp/default.jpg" style="height: 125px;width:125px;" class="w3-circle" alt="User Picture" id="user_dp" />
+    </div>
+    <div class="w3-center w3-padding-small" style="max-width: 100%;width: 600px;margin: auto;">
+        <span style="display: inline-block" class="background w3-padding-small w3-card-2 w3-margin border-bottom" id="user_full_name"></span>
+    </div>
+    <div class="background w3-padding-small border-bottom w3-card-2" style="max-width: 100%;width: 600px;margin-left: auto;margin-right: auto;display: none;word-break: break-all;" id="user_about"></div>
+    <div class="w3-container">
+        <button class="w3-button w3-left w3-blue w3-hover-blue w3-margin-top " data-ripple="rgba(0,0,0,1)" style="display: none;" id="user_message"><span class="fas fa-envelope"></span> Message</button>
+        <div id="user_friendc" style="text-align: right;display: none;" class="w3-margin-top w3-right">
+            <button class="w3-button w3-blue w3-hover-blue" data-ripple="rgba(0,0,0,1)" style="display: none;" onclick="friend('send');" id="user_send"><span class="fas fa-user-plus"></span> Add friend</button>
+            <button class="w3-button w3-red w3-hover-red" data-ripple="rgba(0,0,0,1)" style="display: none;" onclick="friend('cancel');" id="user_cancel"><span class="fas fa-times"></span> Cancel Friend Request</button>
+            <button class="w3-button w3-green w3-hover-green" data-ripple="rgba(0,0,0,1)" style="display: none;" onclick="friend('accept');" id="user_accept"><span class="fas fa-check"></span> Accept</button>
+            <button class="w3-button w3-red w3-hover-red" data-ripple="rgba(0,0,0,1)" style="display: none;" onclick="friend('reject');" id="user_reject"><span class="fas fa-times"></span> Reject</button>
+            <button class="w3-button w3-red w3-hover-red" data-ripple="rgba(0,0,0,1)" style="display: none;" onclick="friend('delete');" id="user_delete"><span class="fas fa-times"></span> Unfriend</button>
+            <span class="fas fa-spin fa-spinner" style="display: none;" id="user_friend_loader"></span>
+        </div>
+    </div>
+    <table class="w3-table background border-bottom w3-margin-top" id="user_table"></table>
+</div>
+
+<hr />
+<div id="user_posts"></div>
+<div class="w3-margin-top w3-center" id="user_posts_loader">
+    <span class="fas fa-spin fa-spinner"></span><br />
+    Loading
+</div>
+<div id="user_posts_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="user_post_page++;user_posts_update(true);">load more posts</div>
+<div class="w3-margin-top background border-bottom w3-card-2" style="margin: 8px;display: none;" id="user_post_prototype">
+    <div class="post-header w3-cell-row w3-border-bottom">
+        <div class="w3-cell w3-cell-middle w3-padding-small" style="text-align: left;"><img src="" style="height: 35px;width: 35px;vertical-align: middle;margin: 0px;" alt="profile picture" class="w3-circle post_image dp" />&nbsp;&nbsp;<a href="" class="link post_link full_name"></a></div>
+        <div class="w3-cell w3-cell-middle" style="text-align: right;"><span class="w3-text-gray post_time w3-margin-right"></span></div>
+    </div>
+    <div class="post-content w3-padding" style="word-wrap: break-word;white-space: pre-wrap;"></div>
+    <div class="w3-row w3-border-bottom">
+        <div class="w3-padding w3-col s6" style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_likes"></a></div>
+        <div class="w3-padding w3-col s6"  style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_comments"></a></div>
+    </div>
+    <div class="w3-row">
+        <div class="w3-padding w3-col s6 post_like w3-border-right" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-thumbs-up"></span> Like</div>
+        <div class="w3-padding w3-col s6 post_comments" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-comments"></span> Comment</div>
+    </div>
+</div>
+<script>
+    var username = window.location.hash.split("/")[1];
+    var friendID;
+    var isFriend = false;
+    var friendinfo;
+    var user_posts = $("#user_posts");
+    var user_posts_load_more = $("#user_posts_load_more");
+    var user_post_prototype = $("#user_post_prototype");
+    var user_post_page = 1;
+    $.post(base_url + "/profile/get.php", {'username': username})
+            .done(function (data) {
+                if (data.success) {
+                    friendID = data.data.user.id;
+                    friendinfo = data.data.user;
+                    if (data.data.friend_status) {
+                        show_friend(data.data.friend_status);
+                        if (isFriend) {
+                            user_posts_update();
+                            $("#user_message").attr('onclick', 'loadTmpPage("chat/'+friendinfo['username']+'")').show();
+                        } else {
+                            $("#user_posts_loader").hide();
+                        }
+                    } else {
+                        $("#user_posts_loader").hide();
+                    }
+                    if (data.data.user.dp) {
+                        $("#user_dp").attr('src', base_site_url + '/api/media/' + data.data.user.media + '/' + data.data.user.dp + '.jpg');
+                    }
+                    $("#user_full_name").text(data.data.user.first_name + ' ' + data.data.user.last_name);
+                    if (data.data.user.about) {
+                        $("#user_about").text(data.data.user.about).show();
+                    }
+                    $("#user_loader, #user_main").toggle();
+                    $("#user_table")
+                            .append('<tr class="w3-border-bottom"><th class="w3-border-right">Username</th><td>' + data.data.user.username + '</td></tr>')
+                            .append('<tr class="w3-border-bottom"><th class="w3-border-right">Email</th><td>' + data.data.user.email + '</td></tr>')
+                            .append('<tr class="w3-border-bottom"><th class="w3-border-right">Date of birth</th><td>' + (new Date(data.data.user.dob)).toLocaleDateString() + '</td></tr>')
+                            .append('<tr class="w3-border-bottom"><th class="w3-border-right">Gender</th><td>' + data.data.user.gender + '</td></tr>');
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                    loadPage("walls");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    loadPage("walls");
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                loadPage("walls");
+            });
+    function friend(action) {
+        $("#user_friendc button").hide();
+        $("#user_friend_loader").show();
+        $.post(base_url + "/friend.php", {'action': action, 'id': friendID})
+                .done(function (data) {
+                    if (data.success) {
+                        if (data.data.friend_status) {
+                            show_friend(data.data.friend_status);
+                        }
+                        $("#user_friend_loader").hide();
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                        loadPage("walls");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        loadPage("walls");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                    loadPage("walls");
+                });
+    }
+    function show_friend(status) {
+        $("#user_friendc").show();
+        switch (status) {
+            case 1:
+                $("#user_send").show();
+                break;
+
+            case 2:
+                $("#user_cancel").show();
+                break;
+
+            case 3:
+                $("#user_accept").show();
+                $("#user_reject").show();
+                break;
+
+            case 4:
+                $("#user_delete").show();
+                isFriend = true;
+                break;
+        }
+    }
+    
+    function user_posts_update(load_more) {
+        $.post(base_url + "/walls/getWall.php", {'page': user_post_page, 'id': friendID})
+                .done(function (data) {
+                    if (data.success) {
+                        if (!load_more) {
+                            user_posts.html('<div class="w3-right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast(\'Refreshing...\', 2000);user_post_page=1;user_posts_update();"><span class="fa fa-sync"></span> Refresh</button></div><h2 class="w3-center">Posts</h2>');
+                        }
+                        if (friendinfo) {
+                            user_post_prototype.find('.post_link').attr('href', '#user/'+friendinfo['username']).text(friendinfo['first_name'] + ' ' + friendinfo['last_name']);
+                            if (friendinfo['dp']) {
+                                user_post_prototype.find('img').attr('src', base_site_url + '/api/media/' + friendinfo.media + '/' + friendinfo.dp + '.jpg');
+                            } else {
+                                user_post_prototype.find('img').attr('src', base_site_url + '/api/media/dp/default.jpg');
+                            }
+                        }
+                        $("#user_posts_loader").hide();
+                        var tData = data.data.result.posts;
+                        if (tData === null) {
+                            if (user_post_page === 1) {
+                                user_posts.append('<div class="w3-center background w3-margin w3-padding">No posts</div>');
+                            } else {
+                                alert('No more posts to display', 2000);
+                            }
+                            user_posts_load_more.hide();
+                            return;
+                        }
+                        if (tData.length < 20) {
+                            user_posts_load_more.hide();
+                        } else {
+                            user_posts_load_more.show();
+                        }
+                        for (var i=0; i<tData.length; i++) {
+                            var tElm = user_post_prototype.clone().removeAttr('id').css('display', 'block');
+                            tElm.find('.post-content').text(tData[i].text);
+                            if(tData[i].media) {
+                                tElm.find('.post-content').append('<div class="w3-center"><' + ((tData[i].media.substring(8) === '.jpg')? 'img' : 'video controls') + ' src="' + base_site_url + '/api/media/' + friendinfo['media'] + '/' + tData[i].media + '" class="post-image-width" /></div>');
+                            }
+                            tElm.find('.post_time').text(tData[i].timeago);
+                            tElm.find('.post_like')
+                                    .attr('id', 'user_post_like_'+tData[i].id)
+                                    .attr('onclick', 'toggleLike('+tData[i].id+')')
+                                    .addClass(tData[i].isLiked ? 'w3-text-blue' : '');
+                            tElm.find('.post_comments')
+                                    .attr('onclick', 'show_comments('+tData[i].id+')');
+                            tElm.find('.post_no_likes')
+                                    .attr('id', 'user_posts_no_likes_'+tData[i].id)
+                                    .attr('onclick', 'show_likes('+tData[i].id+');')
+                                    .text(tData[i].totalLikes + ' Likes');
+                            tElm.find('.post_no_comments')
+                                    .attr('id', 'user_posts_no_comments_'+tData[i].id)
+                                    .attr('onclick', 'show_comments('+tData[i].id+');')
+                                    .text(tData[i].totalComments + ' Comments');
+                            tElm.appendTo(user_posts);
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        $("#user_posts_loader").hide();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#user_posts_loader").hide();
+                });
+    }
+    function toggleLike(id) {
+        $("#user_post_like_" + id).toggleClass('w3-text-blue');
+        $.post(base_url + "/like/toggle_like.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        if (data.data.isLiked) {
+                            $("#user_post_like_" + id).addClass('w3-text-blue');
+                        } else {
+                            $("#user_post_like_" + id).removeClass('w3-text-blue');
+                        }
+                        $("#user_posts_no_likes_" + id).text(data.data.totalLikes + ' Likes');
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function show_likes(id) {
+        var clone = windowDiv.clone().attr('id', 'user_likes_window');
+        clone.find(".window-title").text("Likes");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/like/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var likesWindow = $("#user_likes_window");
+                        likesWindow.find('.window-title').text("Likes(" + data.data.totalLikes + ")").css({'margin':'8px', 'margin-left': '0px'});;
+                        likesWindow.find('.window-header').css({'position':'absolute', width: likesWindow.find('.window-content').css('width')}).addClass('background-image');
+                        var likes_result = likesWindow.find('.window-main');
+                        likes_result.css('margin-top', likesWindow.find('.window-header').height());
+                        likes_result.empty();
+                        for (var i=0; i<data.data.likes.length; i++) {
+                            if (data.data.likes[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.likes[i].media + '/' + data.data.likes[i].dp + '.jpg';
+                            }
+                            likes_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.likes[i].username + '" onclick="$(\'#user_likes_window\').remove();" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.likes[i].first_name + ' ' + data.data.likes[i].last_name + '</a></div>');
+                        }
+                        if(data.data.likes.length === 0) {
+                            likes_result.html('<div class="w3-red w3-center w3-padding">No likes</div>');
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function comment(id, text) {
+        $("#user_comment_textarea").val('');
+        $.post(base_url + "/comment/comment.php", {'pid': id, 'text': text})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#user_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")");
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#user_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="user_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="user_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="comment('+id+', $(\'#user_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#user_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#user_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function show_comments(id) {
+        var clone = windowDiv.clone().removeClass("w3-animate-zoom").attr('id', 'user_comments_window');
+        clone.find(".window-title").text("Comments");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/comment/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#user_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")").css({'margin':'8px', 'margin-left': '0px'});
+                        commentsWindow.find('.window-header').css({'position':'absolute', width: commentsWindow.find('.window-content').css('width')}).addClass('background-image');
+                        
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.css('margin-top', commentsWindow.find('.window-header').height());
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#user_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="user_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="user_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="comment('+id+', $(\'#user_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#user_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#user_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+</script>

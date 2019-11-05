@@ -1,0 +1,328 @@
+<div style="padding-top: 16px;">
+    <div class="w3-center" style="max-width: 100%;width: 600px;margin-left: auto;margin-right: auto;">
+        <img src="api/media/dp/default.jpg" style="height: 125px;width:125px;vertical-align: text-top;" class="dp w3-circle" alt="Profile Picture" />
+        <button class="w3-button w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="$('#file').click();" style="position: absolute;"><span class="fas fa-upload"></span></button>
+    </div>
+    <input type="file" style="display: none" id="file" onchange="changeDp();" />
+    <div class="w3-center w3-padding-small" style="max-width: 100%;width: 600px;margin: auto;">
+        <a style="display: inline-block;text-decoration: none;" class="background w3-padding-small w3-card-2 w3-margin border-bottom full_name" id="profile_full_name"></a>
+    </div>
+    <div style="text-align: right;">
+        <button class="w3-button w3-black w3-hover-black w3-margin-right" data-ripple='rgba(255,255,255,1)' onclick="loadTmpPage('edit_profile')">Edit profile</button>
+    </div>
+</div>
+<hr />
+<div id="profile_posts"></div>
+<div class="w3-margin-top w3-center" id="profile_posts_loader">
+    <span class="fas fa-spin fa-spinner"></span><br />
+    Loading
+</div>
+<div id="profile_posts_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="profile_post_page++;profile_posts_update(true);">load more posts</div>
+<div class="w3-margin-top background border-bottom w3-card-2" style="margin: 8px;display: none;" id="profile_post_prototype">
+    <div class="post-header w3-cell-row w3-border-bottom">
+        <div class="w3-cell w3-cell-middle w3-padding-small" style="text-align: left;"><img src="" style="height: 35px;width: 35px;vertical-align: middle;margin: 0px;" alt="profile picture" class="w3-circle post_image dp" />&nbsp;&nbsp;<a href="" class="link post_link full_name"></a></div>
+        <div class="w3-cell w3-cell-middle" style="text-align: right;"><span class="w3-text-gray post_time"></span><button class="w3-button w3-transparent w3-hover-none post_delete" data-ripple="rgba(0,0,0,1)"><span class="fa fa-trash"></span></button></div>
+    </div>
+    <div class="post-content w3-padding" style="word-wrap: break-word;white-space: pre-wrap;"></div>
+    <div class="w3-row w3-border-bottom">
+        <div class="w3-padding w3-col s6" style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_likes"></a></div>
+        <div class="w3-padding w3-col s6"  style="text-align:center;"><a href="javascript:void(0)" class="w3-text-grey post_no_comments"></a></div>
+    </div>
+    <div class="w3-row">
+        <div class="w3-padding w3-col s6 post_like w3-border-right" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-thumbs-up"></span> Like</div>
+        <div class="w3-padding w3-col s6 post_comments" data-ripple="rgba(0,0,0,1)" style="text-align:center;cursor:pointer"><span class="fas fa-comments"></span> Comment</div>
+    </div>
+</div>
+
+<script>
+    var profile_posts = $("#profile_posts");
+    var profile_posts_load_more = $("#profile_posts_load_more");
+    var profile_post_prototype = $("#profile_post_prototype");
+    var profile_post_page = 1;
+    var tCommentsResult;
+    updateProfile();
+    if(userinfo && userinfo['username']) {
+        $("#profile_full_name").attr("href", "#user/"+userinfo['username']);
+    }
+    function changeDp() {
+        loadPage('loader');
+        var fd = new FormData();
+        fd.append('file', document.getElementById('file').files[0]);
+        $.ajax({
+            url: base_url + '/profile/uploaddp.php',
+            type: 'POST',
+            data: fd,
+            success: function(data){
+                if (data.success) {
+                    loadTmpPage('change_profile_picture');
+                } else if(data.logout) {
+                    loadPage('logout');
+                } else if (data.error) {
+                    toast(data.error, 2000);
+                    loadPage('profile');
+                } else {
+                    toast('Unknown error occured');
+                    loadPage('profile');
+                }
+            },
+            fail: function() {
+                toast('Unknown error occured');
+                loadPage('profile');
+            },
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    }
+    updateDP();
+    function profile_posts_update(load_more) {
+        $.post(base_url + "/walls/getWall.php", {'page': profile_post_page})
+                .done(function (data) {
+                    if (data.success) {
+                        if (!load_more) {
+                            profile_posts.html('<div class="w3-right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast(\'Refreshing...\', 2000);profile_post_page=1;profile_posts_update();"><span class="fa fa-sync"></span> Refresh</button></div><h2 class="w3-center">Posts</h2>');
+                        }
+                        if (userinfo) {
+                            profile_post_prototype.find('.post_link').attr('href', '#user/'+userinfo['username']);
+                        }
+                        $("#profile_posts_loader").hide();
+                        var tData = data.data.result.posts;
+                        if (tData === null) {
+                            if (profile_post_page === 1) {
+                                profile_posts.append('<div class="w3-center background w3-margin w3-padding">No posts</div>');
+                            } else {
+                                alert('No more posts to display', 2000);
+                            }
+                            profile_posts_load_more.hide();
+                            return;
+                        }
+                        if (tData.length < 20) {
+                            profile_posts_load_more.hide();
+                        } else {
+                            profile_posts_load_more.show();
+                        }
+                        for (var i=0; i<tData.length; i++) {
+                            var tElm = profile_post_prototype.clone().removeAttr('id').css('display', 'block');
+                            tElm.find('.post-content').text(tData[i].text);
+                            if(tData[i].media) {
+                                tElm.find('.post-content').append('<div class="w3-center"><' + ((tData[i].media.substring(8) === '.jpg')? 'img' : 'video controls') + ' src="' + base_site_url + '/api/media/' + userinfo['media'] + '/' + tData[i].media + '" class="post-image-width" /></div>');
+                            }
+                            tElm.find('.post_time').text(tData[i].timeago);
+                            tElm.find('.post_delete').attr('id', 'profile_post_delete_'+tData[i].id).click(function(){
+                                toast('deleting', 2000);
+                                $.post(base_url + "/post/delete.php", {'id': $(this).attr('id').substring(20)})
+                                        .done(function (data) {
+                                            if (data.success) {
+                                                profile_posts_update();
+                                            } else if (data.error) {
+                                                toast(data.error);
+                                                if (data.logout) {
+                                                    loadPage('logout');
+                                                }
+                                            } else {
+                                                toast("Unknown error occured. Please contact administrator.");
+                                            }
+                                        })
+                                        .fail(function (error) {
+                                            if (error.status === 0) {
+                                                toast("Unknown error occured. Make sure you have working internet connection.");
+                                            } else {
+                                                toast("Unknown error occured. Please contact administrator.");
+                                            }
+                                        });
+                            });
+                            tElm.find('.post_like')
+                                    .attr('id', 'profile_post_like_'+tData[i].id)
+                                    .attr('onclick', 'toggleLike('+tData[i].id+')')
+                                    .addClass(tData[i].isLiked ? 'w3-text-blue' : '');
+                            tElm.find('.post_comments')
+                                    .attr('onclick', 'show_comments('+tData[i].id+')');
+                            tElm.find('.post_no_likes')
+                                    .attr('id', 'profile_posts_no_likes_'+tData[i].id)
+                                    .attr('onclick', 'show_likes('+tData[i].id+');')
+                                    .text(tData[i].totalLikes + ' Likes');
+                            tElm.find('.post_no_comments')
+                                    .attr('id', 'profile_posts_no_comments_'+tData[i].id)
+                                    .attr('onclick', 'show_comments('+tData[i].id+');')
+                                    .text(tData[i].totalComments + ' Comments');
+                            tElm.appendTo(profile_posts);
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        $("#profile_posts_loader").hide();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#profile_posts_loader").hide();
+                });
+    }
+    function toggleLike(id) {
+        $("#profile_post_like_" + id).toggleClass('w3-text-blue');
+        $.post(base_url + "/like/toggle_like.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        if (data.data.isLiked) {
+                            $("#profile_post_like_" + id).addClass('w3-text-blue');
+                        } else {
+                            $("#profile_post_like_" + id).removeClass('w3-text-blue');
+                        }
+                        $("#profile_posts_no_likes_" + id).text(data.data.totalLikes + ' Likes');
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function show_likes(id) {
+        var clone = windowDiv.clone().attr('id', 'profile_likes_window');
+        clone.find(".window-title").text("Likes");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/like/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var likesWindow = $("#profile_likes_window");
+                        likesWindow.find('.window-title').text("Likes(" + data.data.totalLikes + ")").css({'margin':'8px', 'margin-left': '0px'});;
+                        likesWindow.find('.window-header').css({'position':'absolute', width: likesWindow.find('.window-content').css('width')}).addClass('background-image');
+                        var likes_result = likesWindow.find('.window-main');
+                        likes_result.css('margin-top', likesWindow.find('.window-header').height());
+                        likes_result.empty();
+                        for (var i=0; i<data.data.likes.length; i++) {
+                            if (data.data.likes[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.likes[i].media + '/' + data.data.likes[i].dp + '.jpg';
+                            }
+                            likes_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.likes[i].username + '" onclick="$(\'#profile_likes_window\').remove();" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.likes[i].first_name + ' ' + data.data.likes[i].last_name + '</a></div>');
+                        }
+                        if(data.data.likes.length === 0) {
+                            likes_result.html('<div class="w3-red w3-center w3-padding">No likes</div>');
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function comment(id, text) {
+        $("#profile_comment_textarea").val('');
+        $.post(base_url + "/comment/comment.php", {'pid': id, 'text': text})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#profile_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")");
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#profile_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="profile_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="profile_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="comment('+id+', $(\'#profile_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#profile_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#profile_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function show_comments(id) {
+        var clone = windowDiv.clone().removeClass("w3-animate-zoom").attr('id', 'profile_comments_window');
+        clone.find(".window-title").text("Comments");
+        clone.appendTo(document.body).show();
+        $.post(base_url + "/comment/get.php", {'pid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        var commentsWindow = $("#profile_comments_window");
+                        commentsWindow.find('.window-title').text("Comments(" + data.data.totalComments + ")").css({'margin':'8px', 'margin-left': '0px'});
+                        commentsWindow.find('.window-header').css({'position':'absolute', width: commentsWindow.find('.window-content').css('width')}).addClass('background-image');
+                        
+                        var comments_result = commentsWindow.find('.window-main');
+                        comments_result.css('margin-top', commentsWindow.find('.window-header').height());
+                        comments_result.empty();
+                        for (var i=0; i<data.data.comments.length; i++) {
+                            if (data.data.comments[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.comments[i].media + '/' + data.data.comments[i].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(data.data.comments[i].text);
+                            comments_result.append('<div style="padding-top:8px;"><div class="border-bottom w3-card-2 w3-block background" style="padding:8px;word-wrap: break-word;"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a onclick="$(\'#profile_comments_window\').remove();" class="link" href="#user/' + data.data.comments[i].username + '">' + data.data.comments[i].first_name + ' ' + data.data.comments[i].last_name + '</a><br />'+innerText.html()+'</div>');
+                        }
+                        if(data.data.comments.length === 0) {
+                            comments_result.html('<div class="w3-red w3-center w3-padding">No comments</div>');
+                        }
+                        comments_result.append('<div style="position: absolute; z-index: 5;" class="w3-border-top background-image" id="profile_comment_box"><div class="w3-cell-row"><div class="w3-cell w3-cell-middle" style="padding:4px;width:100%;"><textarea placeholder="Comment" class="w3-input" style="height:3em;" id="profile_comment_textarea"></textarea></div><div class="w3-cell w3-cell-middle" style="text-align:right;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="comment('+id+', $(\'#profile_comment_textarea\').val());"><span class="fas fa-paper-plane"></span></button></div></div></div>');
+                        $("#profile_comment_box").css("bottom", $(".window").css("padding-bottom")).css("width", comments_result.parent().width()+"px").css("margin-left", "-8px");
+                        comments_result.css("margin-bottom", $("#profile_comment_box").css("height"));
+                        comments_result.parent().get(0).scrollTo(0, comments_result.get(0).scrollHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    profile_posts_update();
+</script>

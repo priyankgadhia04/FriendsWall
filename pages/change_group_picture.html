@@ -1,0 +1,71 @@
+<div class="background" style="min-height: 90vh;">
+    <div>
+        <button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="loadTmpPage('group/'+group_dp_id)"><span class="fas fa-arrow-left"></span></button>
+    </div>
+    <div id="change_group_picture_loader" style="text-align: center;">
+        <span class="fas fa-spin fa-spinner w3-large"></span><br />
+        loading
+    </div>
+    <div style="max-width: 256px;margin: auto;display: none;text-align: center;" id="group_cropprc">
+        <img src="" style="width: 100%;" alt="profile picture" id="group_croppr">
+        <br />
+        <button class="w3-button w3-black w3-hover-black" data-ripple="rgba(255, 255, 255, 1)" onclick="crop();">Crop</button>
+    </div>
+</div>
+<script>
+    var group_croppr;
+    $("#group_croppr")
+            .attr("src", "api/v1/group/getdp.php?gid=" + group_dp_id + "&r=" + Math.random())
+            .get(0).onload = (function() {
+                $.getScript("js/croppr.min.js", function() {
+                    $("#cropcss").remove();
+                    document.head.insertAdjacentHTML('beforeend', '<link href="css/croppr.min.css" rel="stylesheet" id="cropcss"/>');
+                    $("#cropcss").get(0).onload = (function() {
+                        group_croppr = new Croppr(document.getElementById('group_croppr'), {
+                            aspectRatio: 1,
+                            onInitialize: function(instance){
+                                setTimeout(function() {
+                                    $("#change_group_picture_loader").hide();
+                                    $("#group_cropprc").show();
+                                    var tWidth = $("#group_cropprc .croppr-image").width();
+                                    var tHeight = $("#group_cropprc .croppr-image").height();
+                                    if(tWidth > tHeight) {
+                                        instance.resizeTo(tHeight, tHeight, [0,0]);
+                                    } else {
+                                        instance.resizeTo(tWidth, tWidth, [0,0]);
+                                    }
+                                }, 500);
+                            }
+                        });
+                    });
+                });
+            });
+    function crop() {
+        var cropValue = group_croppr.getValue();
+        loadPage('loader');
+        $.post(base_url + '/group/uploaddp.php', {"imgdata":cropValue, "gid": group_dp_id})
+                .done(function (data) {
+                    if (data.success) {
+                        loadTmpPage('group/'+group_dp_id);
+                    } else if (data.error) {
+                        toast(data.error, 3000);
+                        if (data.logout) {
+                            loadTmpPage('logout');
+                        } else {    
+                            loadTmpPage('group/'+group_dp_id);
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.", 3000);
+                        loadTmpPage('group/'+group_dp_id);
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.", 3000);
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.", 3000);
+                    }
+                    loadTmpPage('group/'+group_dp_id);
+                });
+    }
+</script>

@@ -1,0 +1,62 @@
+<div>
+    <button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="loadTmpPage('group/'+group_id)"><span class="fas fa-arrow-left"></span></button>
+</div>
+<div class="w3-card-2 border-bottom" style="width: 400px;max-width: 95%;z-index: 2;margin: auto;">
+    <div class="w3-container w3-black"><h3>Edit Group</h3></div>
+    <form class="w3-padding-small border-bottom" style="opacity: 0.7;background-color: white;" onsubmit="edit_group(event);" id="group_edit_form">
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-users"></i></div>
+            <div class="w3-rest">
+                <input type="text" class="w3-input" name="name" id="group_edit_name" placeholder="Name" required />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-edit"></i></div>
+            <div class="w3-rest">
+                <textarea placeholder="Write description of the group" class="w3-input" id="group_edit_description" name="description"></textarea>
+            </div>
+        </div>
+        <div style="display: none;" class="w3-row" id="group_edit_errorc">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge w3-text-red fas fa-exclamation-triangle"></i></div>
+            <div class="w3-rest w3-padding w3-red" id="group_edit_error"></div>
+        </div>
+        <div class="w3-padding-small">
+            <button type="submit" class="w3-button w3-block w3-green w3-hover-shadow w3-hover-green" data-ripple="rgba(255, 255, 255, 1)" id="group_edit_button">Save <span class="fas fa-check"></span></button><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" style="display: none;cursor: default;" id="group_edit_loader"><span class="fas fa-spinner fa-spin"></span></button>
+        </div>
+    </form>
+</div>
+<script>
+    document.getElementById('group_edit_name').value = group_name;
+    document.getElementById('group_edit_description').value = group_description;
+    function edit_group(event) {
+        event.preventDefault();
+        toast('Saving...', 1500);
+        $("#group_edit_button").hide();
+        $("#group_edit_loader").show();
+        $.post(base_url + '/group/update.php', {'gid': group_id, 'name': document.getElementById('group_edit_name').value, 'description': document.getElementById('group_edit_description').value})
+                .done(function (data) {
+                    if (data.success) {
+                        toast("Saved...", 3000);
+                        reloadPage('group/'+group_id);
+                    } else if (data.error) {
+                        $("#group_edit_error").html(data.error);
+                        $("#group_edit_errorc").show();
+                    } else {
+                        $("#group_edit_error").html("Unknown error occured. Please contact administrator.");
+                        $("#group_edit_errorc").show();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        $("#group_edit_error").html("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        $("#group_edit_error").html("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#group_edit_errorc").show();
+                })
+                .always(function () {
+                    $("#group_edit_button").show();
+                    $("#group_edit_loader").hide();
+                });
+    }
+</script>

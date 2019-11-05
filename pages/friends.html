@@ -1,0 +1,52 @@
+<div style="text-align: right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast('Refreshing...', 2000);friends_page=1;friends_load();"><span class="fa fa-sync"></span> Refresh</button></div>
+<div id="friends_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="friends_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="friends_page++;friends_load(true);">load more friends</div>
+<script>
+    var friends_result = $("#friends_result");
+    var friends_load_more = $("#friends_load_more");
+    var friends_page = 1;
+    function friends_load(load_more) {
+        $.post(base_url + "/friends.php", {'page': friends_page})
+                .done(function (data) {
+                    if (data.success) {
+                        var url;
+                        if (!load_more) {
+                            friends_result.empty();
+                        }
+                        for (var i=0; i<data.data.friends.length; i++) {
+                            if (data.data.friends[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.friends[i].media + '/' + data.data.friends[i].dp + '.jpg';
+                            }
+                            friends_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.friends[i].username + '" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.friends[i].first_name + ' ' + data.data.friends[i].last_name + '</a></div>');
+                        }
+                        if(data.data.friends.length === 0) {
+                            if (load_more) {
+                                toast("no more friends found");
+                            } else {
+                                friends_result.html('<div class="w3-red w3-center w3-padding">No friends</div>');
+                            }
+                            friends_load_more.hide();
+                        } else if(data.data.friends.length < 10) {
+                            friends_load_more.hide();
+                        } else {
+                            friends_load_more.show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    friends_load();
+</script>

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2019 Aditya Nathwani <adityanathwani@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script>if (localStorage.loggedIn)
+                window.location.href = './';</script>
+        <title>Friends' Wall Social Network</title>
+        <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+        <meta name="theme-color" content="#000000" />
+        <link rel="stylesheet" type="text/css" href="css/w3.css" />
+        <link rel="stylesheet" type="text/css" href="css/custom.css" />
+        <script type="text/javascript" src="js/jquery.min.js"></script>
+    </head>
+    <body style="background-image: url('img/bg.jpg');background-attachment: fixed;background-size: cover;">
+        <h1 style="text-align: center">Friends' Wall</h1>
+        <p style="text-align: center">A great place to connect with friends</p>
+        <div class="w3-card-2 w3-animate-left" style="width: 400px;max-width: 100%;border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;z-index: 2;margin: auto;margin-top: 8px;" id="loginc">
+            <div class="w3-container w3-black"><h3>Login</h3></div>
+            <form class="w3-padding-small" style="border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;opacity: 0.7;background-color: white;" onsubmit="login(event);" id="loginform">
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-at"></i></div>
+                    <div class="w3-rest">
+                        <input type="email" class="w3-input" placeholder="Email" name="email" required />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-key"></i></div>
+                    <div class="w3-rest">
+                        <input type="password" class="w3-input" placeholder="Password" name="password" required />
+                    </div>
+                </div>
+                <input type="hidden" name="cokkie" value="true" />
+                <div style="display: none;" class="w3-row" id="loginerrorc">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge w3-text-red fas fa-exclamation-triangle"></i></div>
+                    <div class="w3-rest w3-padding w3-red" id="loginerror"></div>
+                </div>
+                <div class="w3-section w3-row-padding">
+                    <div class="w3-col s6"><button type="submit" class="w3-button w3-block w3-light-blue w3-hover-shadow w3-hover-light-blue" data-ripple="rgba(255, 255, 255, 1)" id="loginbutton"><span class="fas fa-check"></span> Login</button><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" style="display: none;cursor: default;" id="loginloader"><span class="fas fa-spinner fa-spin"></span></button></div>
+                    <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-black w3-hover-shadow w3-hover-black" data-ripple="rgba(255, 255, 255, 1)" onclick="$('#loginc').hide();$('#registerc input[name=\'email\']').val($('#loginc input[name=\'email\']').val());$('#registerc input[name=\'password\']').val($('#loginc input[name=\'password\']').val());$('#registerc').show();">Register <span class="fas fa-arrow-right"></span></button></div>
+                </div>
+            </form>
+        </div>
+
+
+        <div class="w3-card-2 w3-animate-right" style="width: 400px;max-width: 100%;border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;display: none;z-index: 2;margin: auto;margin-top: 8px;" id="registerc">
+            <div class="w3-container w3-black"><h3>Register</h3></div>
+            <form class="w3-padding-small" style="border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;opacity: 0.7;background-color: white;" onsubmit="register(event);" id="regform">
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-user"></i></div>
+                    <div class="w3-rest w3-row">
+                        <div class="w3-col s6" style="padding-right: 1px;"><input type="text" class="w3-input" placeholder="First Name" name="first_name" required /></div>
+                        <div class="w3-col s6" style="padding-left: 1px;"><input type="text" class="w3-input" placeholder="Last Name" name="last_name" required  /></div>
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-user-tag"></i></div>
+                    <div class="w3-rest">
+                        <input type="text" class="w3-input" name="username" placeholder="Username" required />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-at"></i></div>
+                    <div class="w3-rest">
+                        <input type="email" class="w3-input" name="email" placeholder="Email" required />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-venus"></i></div>
+                    <div class="w3-rest w3-row-padding">
+                        <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-black w3-hover-black" onclick="$('#female').addClass('w3-transparent w3-hover-none').removeClass('w3-black w3-hover-black');$(this).removeClass('w3-transparent w3-hover-none').addClass('w3-black w3-hover-black');$('#gender').val('male');" data-ripple="rgba(0, 0, 0, 1)" id="male"><span class="fas fa-male"></span> Male</button></div>
+                        <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" onclick="$('#male').addClass('w3-transparent w3-hover-none').removeClass('w3-black w3-hover-black');$(this).removeClass('w3-transparent w3-hover-none').addClass('w3-black w3-hover-black');$('#gender').val('female');" data-ripple="rgba(0, 0, 0, 1)" id="female"><span class="fas fa-female"></span> Female</button></div>
+                        <input type="hidden" name="gender" value="male" id="gender" />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-calendar"></i></div>
+                    <div class="w3-rest">
+                        <input type="text" class="w3-input" placeholder="Date of Birth" onfocus="if (this.type === 'text') this.type = 'date';" onclick="this.type = 'date';this.focus();" name="dob" required />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-key"></i></div>
+                    <div class="w3-rest">
+                        <input type="password" class="w3-input" placeholder="Password" name="password" required />
+                    </div>
+                </div>
+                <div class="w3-row w3-section">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-key"></i></div>
+                    <div class="w3-rest">
+                        <input type="password" class="w3-input" placeholder="Confirm Password" name="confirm_password" required />
+                    </div>
+                </div>
+                <div style="display: none;" class="w3-row" id="regerrorc">
+                    <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge w3-text-red fas fa-exclamation-triangle"></i></div>
+                    <div class="w3-rest w3-padding w3-red" id="regerror"></div>
+                </div>
+                <div class="w3-section w3-row-padding">
+                    <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-black w3-hover-shadow w3-hover-black" data-ripple="rgba(255, 255, 255, 1)" onclick="$('#registerc').hide();$('#loginc').show();" id="openloginc"><span class="fas fa-arrow-left"></span> Login</button></div>
+                    <div class="w3-col s6"><button type="submit" class="w3-button w3-block w3-light-blue w3-hover-shadow w3-hover-light-blue" data-ripple="rgba(255, 255, 255, 1)" id="regbutton">Register <span class="fas fa-check"></span></button><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" style="display: none;cursor: default;" id="regloader"><span class="fas fa-spinner fa-spin"></span></button></div>
+                </div>
+            </form>
+        </div>
+
+        <div class="toast w3-card w3-animate-bottom" style="position: fixed;font-size: 1.2em;display: none;height: 2.5em;line-height: 2.5em;background-color: #323232;color: #d1d1d1;opacity: .9;top: 2%;right: 45%;padding-left: 8px;padding-right: 8px;z-index: 999;"></div>
+
+        <script type="text/javascript" src="js/fontawesome-all.min.js"></script>
+        <script type="text/javascript" src="js/custom.js"></script>
+        <script>
+            function register(event) {
+                event.preventDefault();
+                toast('Registering...', 1500);
+                $("#regbutton").hide();
+                $("#regloader").show();
+                $.post(base_url + '/user/create.php', $("#regform").serialize())
+                        .done(function (data) {
+                            if (data.success) {
+                                toast("Successfully registered.", 3000);
+                                $("#loginc input[name='email']").val($("#registerc input[name='email']").val());
+                                $("#openloginc").click();
+                            } else if (data.error) {
+                                $("#regerror").html(data.error);
+                                $("#regerrorc").show();
+                            } else {
+                                $("#regerror").html("Unknown error occured. Please contact administrator.");
+                                $("#regerrorc").show();
+                            }
+                        })
+                        .fail(function (error) {
+                            if (error.status === 0) {
+                                $("#regerror").html("Unknown error occured. Make sure you have working internet connection.");
+                            } else {
+                                $("#regerror").html("Unknown error occured. Please contact administrator.");
+                            }
+                            $("#regerrorc").show();
+                        })
+                        .always(function () {
+                            $("#regbutton").show();
+                            $("#regloader").hide();
+                        });
+            }
+            function login(event) {
+                event.preventDefault();
+                toast('Logging in...', 1500);
+                $("#loginbutton").hide();
+                $("#loginloader").show();
+                $.post(base_url + '/user/login.php', $("#loginform").serialize())
+                        .done(function (data) {
+                            if (data.success) {
+                                localStorage.loggedIn = true;
+                                document.location.href = base_site_url;
+                            } else if (data.error) {
+                                $("#loginerror").html(data.error);
+                                $("#loginerrorc").show();
+                            } else {
+                                $("#loginerror").html("Unknown error occured. Please contact administrator.");
+                                $("#loginerrorc").show();
+                            }
+                        })
+                        .fail(function (error) {
+                            if (error.status === 0) {
+                                $("#loginerror").html("Unknown error occured. Make sure you have working internet connection.");
+                            } else {
+                                $("#loginerror").html("Unknown error occured. Please contact administrator.");
+                            }
+                            $("#loginerrorc").show();
+                        })
+                        .always(function () {
+                            $("#loginbutton").show();
+                            $("#loginloader").hide();
+                        });
+            }
+
+        </script>
+    </body>
+</html>

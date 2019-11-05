@@ -1,0 +1,60 @@
+<div>
+    <button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="loadPage('groups')"><span class="fas fa-arrow-left"></span></button>
+</div>
+<div class="w3-card-2 border-bottom" style="width: 400px;max-width: 95%;z-index: 2;margin: auto;">
+    <div class="w3-container w3-black"><h3>New Group</h3></div>
+    <form class="w3-padding-small border-bottom" style="opacity: 0.7;background-color: white;" onsubmit="create_group(event);" id="groups_new_form">
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-users"></i></div>
+            <div class="w3-rest">
+                <input type="text" class="w3-input" name="name" placeholder="Name" required />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-edit"></i></div>
+            <div class="w3-rest">
+                <textarea placeholder="Write description of the new group" class="w3-input" name="description"></textarea>
+            </div>
+        </div>
+        <div style="display: none;" class="w3-row" id="groups_new_errorc">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge w3-text-red fas fa-exclamation-triangle"></i></div>
+            <div class="w3-rest w3-padding w3-red" id="groups_new_error"></div>
+        </div>
+        <div class="w3-padding-small">
+            <button type="submit" class="w3-button w3-block w3-green w3-hover-shadow w3-hover-green" data-ripple="rgba(255, 255, 255, 1)" id="groups_new_button">Create <span class="fas fa-check"></span></button><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" style="display: none;cursor: default;" id="groups_new_loader"><span class="fas fa-spinner fa-spin"></span></button>
+        </div>
+    </form>
+</div>
+<script>
+    function create_group(event) {
+        event.preventDefault();
+        toast('Creating group...', 1500);
+        $("#groups_new_button").hide();
+        $("#groups_new_loader").show();
+        $.post(base_url + '/group/create.php', $("#groups_new_form").serialize())
+                .done(function (data) {
+                    if (data.success) {
+                        toast("Group created...", 3000);
+                        loadPage('group/'+data.data.id);
+                    } else if (data.error) {
+                        $("#groups_new_error").html(data.error);
+                        $("#groups_new_errorc").show();
+                    } else {
+                        $("#groups_new_error").html("Unknown error occured. Please contact administrator.");
+                        $("#groups_new_errorc").show();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        $("#groups_new_error").html("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        $("#groups_new_error").html("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#groups_new_errorc").show();
+                })
+                .always(function () {
+                    $("#groups_new_button").show();
+                    $("#groups_new_loader").hide();
+                });
+    }
+</script>

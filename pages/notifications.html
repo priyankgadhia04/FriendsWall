@@ -1,0 +1,100 @@
+<div style="text-align: right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast('Refreshing...', 2000);notifications_page=1;notifications_load();"><span class="fa fa-sync"></span> Refresh</button></div>
+<div id="notifications_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="notifications_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="notifications_page++;notifications_load(true);">load more notifications</div>
+<script>
+    var notifications_result = $("#notifications_result");
+    var notifications_load_more = $("#notifications_load_more");
+    var notifications_page = 1;
+    function notifications_load(load_more) {
+        $.post(base_url + "/notification/get.php", {'page': notifications_page})
+                .done(function (data) {
+                    if (data.success) {
+                        if (!load_more) {
+                            notifications_result.empty();
+                        }
+                        for (var i=0; i<data.data.notifications.length; i++) {
+                            var tData = data.data.notifications[i];
+                            if (parseInt(tData.isread)===0) {
+                                $.post(base_url + "/notification/read.php", {'id': tData.id});
+                            }
+                            switch (parseInt(tData.type)) {
+                                case 1: //COMMENTS
+                                    var url;
+                                    if (tData.user.dp === '') {
+                                        url = base_site_url + '/api/media/dp/default.jpg';
+                                    } else {
+                                        url = base_site_url + '/api/media/' + tData.user.media + '/' + tData.user.dp + '.jpg';
+                                    }
+                                    var innerText = $('<div />').text(tData.text);
+                                    var others = '';
+                                    if (parseInt(tData.total_comments) > 1) {
+                                        others = ' and ' + (parseInt(tData.total_comments) - 1) + ' others commented on your post:';
+                                    } else {
+                                        others = ' commented on your post:';
+                                    }
+                                    notifications_result.append('<div style="padding-top:8px;'+((parseInt(tData.isread)===0)?'font-weight:bold;':'')+'"><div class="border-bottom w3-card-2 w3-block background" data-ripple="rgba(0,0,0,1)" style="padding:8px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#post/'+tData.pid+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a class="link" onclick="event.stopPropagation();window.location.href = \'#user/' + tData.user.username + '\';" href="#user/' + tData.user.username + '">' + tData.user.first_name + ' ' + tData.user.last_name + '</a>'+others+'<br />'+innerText.html()+'<br /><div class="w3-right w3-tiny">'+(new Date(tData.time)).toLocaleString()+'</div></div></div>');
+                                    break;
+                                case 2: //FRIENDS
+                                    var url;
+                                    if (tData.user.dp === '') {
+                                        url = base_site_url + '/api/media/dp/default.jpg';
+                                    } else {
+                                        url = base_site_url + '/api/media/' + tData.user.media + '/' + tData.user.dp + '.jpg';
+                                    }
+                                    notifications_result.append('<div style="padding-top:8px;'+((parseInt(tData.isread)===0)?'font-weight:bold;':'')+'"><div class="border-bottom w3-card-2 w3-block background" data-ripple="rgba(0,0,0,1)" style="padding:8px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#user/'+tData.user.username+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="display:inline-block;margin-right:8px;vertical-align:middle;" />' + tData.user.first_name + ' ' + tData.user.last_name + ' accepted your friend request.<br /><div class="w3-right w3-tiny">'+(new Date(tData.time)).toLocaleString()+'</div></div></div>');
+                                    break;
+                                case 3: //GROUP
+                                    var url;
+                                    if (tData.group.dp === '') {
+                                        url = base_site_url + '/api/media/dp/group.jpg';
+                                    } else {
+                                        url = base_site_url + '/api/media/' + tData.group.media + '/' + tData.group.dp + '.jpg';
+                                    }
+                                    notifications_result.append('<div style="padding-top:8px;'+((parseInt(tData.isread)===0)?'font-weight:bold;':'')+'"><div class="border-bottom w3-card-2 w3-block background" data-ripple="rgba(0,0,0,1)" style="padding:8px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#group/'+tData.group.id+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="display:inline-block;margin-right:8px;vertical-align:middle;" />You were added to the group ' + tData.group.name + '<br /><div class="w3-right w3-tiny">'+(new Date(tData.time)).toLocaleString()+'</div></div></div>');
+                                    break;
+                                case 4: //LIKES
+                                    var url;
+                                    if (tData.user.dp === '') {
+                                        url = base_site_url + '/api/media/dp/default.jpg';
+                                    } else {
+                                        url = base_site_url + '/api/media/' + tData.user.media + '/' + tData.user.dp + '.jpg';
+                                    }
+                                    var others = '';
+                                    if (parseInt(tData.total_likes) > 1) {
+                                        others = ' and ' + (parseInt(tData.total_likes) - 1) + ' others liked your post.';
+                                    } else {
+                                        others = ' liked your post.';
+                                    }
+                                    notifications_result.append('<div style="padding-top:8px;'+((parseInt(tData.isread)===0)?'font-weight:bold;':'')+'"><div class="border-bottom w3-card-2 w3-block background" data-ripple="rgba(0,0,0,1)" style="padding:8px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="window.location.href=\'#post/'+tData.pid+'\';"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a class="link" onclick="event.stopPropagation();window.location.href = \'#user/' + tData.user.username + '\';" href="#user/' + tData.user.username + '">' + tData.user.first_name + ' ' + tData.user.last_name + '</a>'+others+'<br /><div class="w3-right w3-tiny">'+(new Date(tData.time)).toLocaleString()+'</div></div></div>');
+                                    break;
+                            }
+                        }
+                        if(data.data.notifications.length === 0) {
+                            if (load_more) {
+                                toast("no more notifications found");
+                            } else {
+                                notifications_result.html('<div class="w3-red w3-center w3-padding">No notifications</div>');
+                            }
+                            notifications_load_more.hide();
+                        } else if(data.data.notifications.length < 10) {
+                            notifications_load_more.hide();
+                        } else {
+                            notifications_load_more.show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    notifications_load();
+</script>

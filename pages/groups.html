@@ -1,0 +1,56 @@
+<div style="text-align: right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast('Refreshing...', 2000);groups_page=1;groups_load();" style="margin-right: 0px !important;"><span class="fa fa-sync"></span> Refresh</button><a href="#groups/new" class="w3-margin w3-button w3-black w3-hover-black" data-ripple="rgba(255, 255, 2551)"><span class="fas fa-plus"></span> New</a></div>
+<div id="groups_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="groups_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="groups_page++;groups_load(true);">load more groups</div>
+<script>
+    var groupsSubPages = window.location.hash.split("/");
+    if (groupsSubPages[1]) {
+        loadTmpPage('groups_' + groupsSubPages[1]);
+    }
+    var groups_result = $("#groups_result");
+    var groups_load_more = $("#groups_load_more");
+    var groups_page = 1;
+    function groups_load(load_more) {
+        $.post(base_url + "/group/getGroups.php", {'page': groups_page})
+                .done(function (data) {
+                    if (data.success) {
+                        var url;
+                        if (!load_more) {
+                            groups_result.empty();
+                        }
+                        for (var i=0; i<data.data.groups.length; i++) {
+                            if (data.data.groups[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.groups[i].media + '/' + data.data.groups[i].dp + '.jpg';
+                            }
+                            groups_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#group/' + data.data.groups[i].id + '" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.groups[i].name + '</a></div>');
+                        }
+                        if(data.data.groups.length === 0) {
+                            if (load_more) {
+                                toast("no more groups found");
+                            } else {
+                                groups_result.html('<div class="w3-red w3-center w3-padding">No groups</div>');
+                            }
+                            groups_load_more.hide();
+                        } else if(data.data.groups.length < 20) {
+                            groups_load_more.hide();
+                        } else {
+                            groups_load_more.show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    groups_load();
+</script>

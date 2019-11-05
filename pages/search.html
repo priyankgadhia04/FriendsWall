@@ -1,0 +1,63 @@
+<div class="w3-padding-small">
+    <input type="text" class="w3-input" placeholder="Search" onkeyup="search_page=1;search(false);" id="search_input" />
+</div>
+<div id="search_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="search_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="search_page++;search(true);">load more results</div>
+<script>
+    var search_input = $("#search_input");
+    var search_result = $("#search_result");
+    var search_load_more = $("#search_load_more");
+    var search_page = 1;
+    var search_post = '';
+    function search(load_more) {
+        if(search_post !== '') {
+            search_post.abort();
+        }
+        if (search_input.val()) {
+            search_post = $.post(base_url + "/user/search.php", {'string': search_input.val(),'page': search_page})
+                    .done(function (data) {
+                        if (data.success) {
+                            var url;
+                            if (!load_more) {
+                                search_result.empty();
+                            }
+                            for (var i=0; i<data.data.result.length; i++) {
+                                if (data.data.result[i].dp === '') {
+                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                } else {
+                                    url = base_site_url + '/api/media/' + data.data.result[i].media + '/' + data.data.result[i].dp + '.jpg';
+                                }
+                                search_result.append('<div style="padding-top:8px;"><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.result[i].username + '" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.result[i].first_name + ' ' + data.data.result[i].last_name + '</a></div>');
+                            }
+                            if(data.data.result.length === 0) {
+                                if (load_more) {
+                                    toast("no more result found");
+                                } else {
+                                    search_result.html('<div class="w3-red w3-center w3-padding">No result found</div>');
+                                }
+                                search_load_more.hide();
+                            } else if(data.data.result.length < 10) {
+                                search_load_more.hide();
+                            } else {
+                                search_load_more.show();
+                            }
+                        } else if (data.error) {
+                            toast(data.error);
+                            if (data.logout) {
+                                loadPage('logout');
+                            }
+                        } else {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    })
+                    .fail(function (error) {
+                        if (error.status !== 0) {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    });
+        } else {
+            search_result.empty();
+            search_load_more.hide();
+        }
+    }
+</script>

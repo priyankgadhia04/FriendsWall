@@ -1,0 +1,253 @@
+<div style="text-align: right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="show_add_member();" style="margin-right: 0px !important;display: none;" id="group_members_add_button"><span class="fa fa-plus"></span> Add</button><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast('Refreshing...', 2000);group_members_page=1;group_members_load();"><span class="fa fa-sync"></span> Refresh</button></div>
+<div class="w3-padding-small w3-responsive"><table id="group_members_result" class="w3-table background border-bottom"></table></div>
+<div id="group_members_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="group_members_page++;group_members_load(true);">load more friends</div>
+<script>
+    var group_members_result = $("#group_members_result");
+    var group_members_load_more = $("#group_members_load_more");
+    var group_members_page = 1;
+    var group_members = {};
+    var group_admin_make = '';
+    var group_admin_remove = '';
+    var add_member_search_input;
+    var add_member_search_result;
+    var add_member_search_load_more;
+    var add_member_search_page = 1;
+    var add_member_search_post = '';
+    var add_member_added = '<span class="w3-text-green">Added</span>';
+    var adminOptPre = '<td style="vertical-align:middle;text-align:center;"><button data-ripple="rgba(0,0,0,1)" class="w3-button w3-small ';
+    var adminOptSuf = '</button></td>';
+    var adminOptRemove = adminOptPre + 'w3-red w3-hover-red" onclick="group_members_remove_admin($(this).parents(\'.adminAct\').attr(\'id\').substring(3), this);">Remove Admin' + adminOptSuf;
+    var adminOptAdd = adminOptPre + 'w3-green w3-hover-green" onclick="group_members_make_admin($(this).parents(\'.adminAct\').attr(\'id\').substring(3), this);">Make Admin' + adminOptSuf;
+    if (group_admin) {
+        $("#group_members_add_button").show();
+    }
+    function group_members_load(load_more) {
+        $.post(base_url + "/group/members/get.php", {'page': group_members_page, 'gid': group_id})
+                .done(function (data) {
+                    if (data.success) {
+                        var url;
+                        if (!load_more) {
+                            group_members_result.empty();
+                        }
+                        group_members_result.append('<tr class="w3-border-bottom"><th>Name</th><th>Admin</th>'+(group_admin?'<th>Remove</th>':'')+'</tr>');
+                        for (var i=0; i<data.data.members.length; i++) {
+                            group_members[data.data.members[i].id] = true;
+                            if (data.data.members[i].dp === '') {
+                                url = base_site_url + '/api/media/dp/group.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.members[i].media + '/' + data.data.members[i].dp + '.jpg';
+                            }
+                            var adminOpt = '';
+                            if (group_admin) {
+                                if (userinfo['id'] === parseInt(data.data.members[i].id)) {
+                                    adminOpt += '<td colspan="2"></td>';
+                                } else {
+                                    if (data.data.members[i].isadmin) {
+                                        adminOpt += adminOptRemove;
+                                    } else {
+                                        adminOpt += adminOptAdd;
+                                    }
+                                    adminOpt += '<td style="vertical-align:middle;text-align:center;"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="remove_member($(this).parents(\'.adminAct\').attr(\'id\').substring(3), this);"><span class="fas fa-trash"</span></button></td>';
+                                }
+                            } else {
+                                adminOpt = '<td style="text-align:center;">'+(data.data.members[i].isadmin?'<span class="w3-green w3-tag w3-round">Admin</span>':'')+'</td>';
+                            }
+                            group_members_result.append('<tr class="w3-border-bottom adminAct" id="mem'+data.data.members[i].id+'"><td style="width:100%;padding-left:8px;white-space: nowrap;"><img src="' + url + '" height="50" width="50" style="vertical-align:middle;margin:0px;" class="w3-circle w3-border" />&nbsp;&nbsp;&nbsp;<a href="#user/' + data.data.members[i].username + '">' + data.data.members[i].first_name + ' ' + data.data.members[i].last_name +'</a></td>' + adminOpt + '</tr>');
+                        }
+                        if(data.data.members.length === 0) {
+                            if (load_more) {
+                                toast("no more members found");
+                            } else {
+                                group_members_result.html('<div class="w3-red w3-center w3-padding">No members</div>');
+                            }
+                            group_members_load_more.hide();
+                        } else if(data.data.members.length < 10) {
+                            group_members_load_more.hide();
+                        } else {
+                            group_members_load_more.show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function show_add_member() {
+        var clone = windowDiv.clone().removeAttr('id');
+        clone.find('.window-title').text('Add member').css({'margin':'8px', 'margin-left': '0px'});;
+        clone.appendTo(document.body).show();
+        clone.find('.window-header').css({'position':'absolute', width: clone.find('.window-content').css('width')}).addClass('background-image');
+
+        var add_member_result = clone.find('.window-main');
+        add_member_result.css('margin-top', clone.find('.window-header').height());
+        add_member_result.html('<div class="w3-padding-small"><input type="text" class="w3-input" placeholder="Search" onkeyup="add_member_search_page=1;add_member_search(false);" id="add_member_search_input" /></div><div id="add_member_search_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div><div id="add_member_search_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="add_member_search_page++;add_member_search(true);">load more results</div>');
+        add_member_search_input = $("#add_member_search_input");
+        add_member_search_result = $("#add_member_search_result");
+        add_member_search_load_more = $("#add_member_search_load_more");
+    }
+    function add_member_search(load_more) {
+        if(add_member_search_post !== '') {
+            add_member_search_post.abort();
+        }
+        if (add_member_search_input.val()) {
+            add_member_search_post = $.post(base_url + "/friends.php", {'search_string': add_member_search_input.val(),'page': add_member_search_page})
+                    .done(function (data) {
+                        if (data.success) {
+                            var url;
+                            if (!load_more) {
+                                add_member_search_result.empty();
+                            }
+                            for (var i=0; i<data.data.result.length; i++) {
+                                if (data.data.result[i].dp === '') {
+                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                } else {
+                                    url = base_site_url + '/api/media/' + data.data.result[i].media + '/' + data.data.result[i].dp + '.jpg';
+                                }
+                                var added;
+                                if (group_members[parseInt(data.data.result[i].id)]) {
+                                    added = add_member_added;
+                                } else {
+                                    added = '<button class="w3-small w3-button w3-black w3-hover-black" data-ripple="rgba(255,255,255,1)" onclick="add_member('+data.data.result[i].id+', this);">Add</button</div>';
+                                }
+                                add_member_search_result.append('<div style="padding-top:8px;"><div class="w3-cell-row w3-card-2 background border-bottom"><div class="w3-cell w3-padding-small"><img src="' + url + '" height="50" width="50" style="vertical-align:middle;margin:0px;" class="w3-circle w3-border" />&nbsp;&nbsp;&nbsp;<a href="#user/' + data.data.result[i].username + '">' + data.data.result[i].first_name + ' ' + data.data.result[i].last_name +'</a></div><div class="w3-cell">'+added+'</div></div>');
+                            }
+                            if(data.data.result.length === 0) {
+                                if (load_more) {
+                                    toast("no more result found");
+                                } else {
+                                    add_member_search_result.html('<div class="w3-red w3-center w3-padding">No result found</div>');
+                                }
+                                add_member_search_load_more.hide();
+                            } else if(data.data.result.length < 10) {
+                                add_member_search_load_more.hide();
+                            } else {
+                                add_member_search_load_more.show();
+                            }
+                        } else if (data.error) {
+                            toast(data.error);
+                            if (data.logout) {
+                                loadPage('logout');
+                            }
+                        } else {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    })
+                    .fail(function (error) {
+                        if (error.status !== 0) {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    });
+        } else {
+            add_member_search_result.empty();
+            add_member_search_load_more.hide();
+        }
+    }
+    function add_member(id, elm) {
+        elm.style.visibility = "hidden";
+        $.post(base_url + '/group/members/add.php', {'gid': group_id, 'uid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        $(elm).replaceWith(add_member_added);
+                        group_members_page=1;
+                        group_members_load();
+                    } else if (data.error) {
+                        toast(data.error);
+                        elm.style.visibility = "visible";
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        elm.style.visibility = "visible";
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                        elm.style.visibility = "visible";
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                        elm.style.visibility = "visible";
+                    }
+                });
+    }
+    function remove_member(id, elm) {
+        $.post(base_url + '/group/members/remove.php', {'gid': group_id, 'uid': id})
+                .done(function (data) {
+                    if (data.success) {
+                        $(elm).parents('tr').remove();
+                        group_members[id] = false;
+                    } else if (data.error) {
+                        toast(data.error);
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function group_members_remove_admin(id, elm) {
+        elm.style.visibility = 'hidden';
+        $.post(base_url + "/group/members/remove_admin.php", {'gid': group_id, 'uid': id})
+            .done(function (data) {
+                if (data.success) {
+                    $(elm).parent().replaceWith(adminOptAdd);
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                    elm.style.visibility = 'visible';
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    elm.style.visibility = 'visible';
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                elm.style.visibility = 'visible';
+            });
+    }
+    function group_members_make_admin(id, elm) {
+        elm.style.visibility = 'hidden';
+        $.post(base_url + "/group/members/make_admin.php", {'gid': group_id, 'uid': id})
+            .done(function (data) {
+                if (data.success) {
+                    $(elm).parent().replaceWith(adminOptRemove);
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                    elm.style.visibility = 'visible';
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    elm.style.visibility = 'visible';
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                elm.style.visibility = 'visible';
+            });
+    }
+    group_members_load();
+</script>

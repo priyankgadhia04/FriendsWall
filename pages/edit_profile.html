@@ -1,0 +1,128 @@
+<div>
+    <button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="loadPage('profile')"><span class="fas fa-arrow-left"></span></button>
+</div>
+<div class="w3-card-2" style="width: 400px;max-width: 95%;border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;z-index: 2;margin: auto;">
+    <div class="w3-container w3-black"><h3>Edit Profile</h3></div>
+    <div class="w3-padding-small" style="border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;opacity: 0.7;background-color: white;" onsubmit="save_profile(event);" id="edit_profile_content_loader">
+        <div class="w3-center w3-margin-top"><span class="fas fa-spinner fa-spin w3-xlarge"></span><br>Getting info</div>
+    </div>
+    <form class="w3-padding-small" style="border-bottom-left-radius: 10px;border-bottom-right-radius: 10px;opacity: 0.7;background-color: white;display: none;" onsubmit="save_profile(event);" id="edit_profile_form">
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-user"></i></div>
+            <div class="w3-rest w3-row">
+                <div class="w3-col s6" style="padding-right: 1px;"><input type="text" class="w3-input" placeholder="First Name" name="first_name" id="edit_profile_first_name" required /></div>
+                <div class="w3-col s6" style="padding-left: 1px;"><input type="text" class="w3-input" placeholder="Last Name" name="last_name" id="edit_profile_last_name" required  /></div>
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-at"></i></div>
+            <div class="w3-rest">
+                <input type="email" class="w3-input" name="email" id="edit_profile_email" placeholder="Email" required />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-fingerprint"></i></div>
+            <div class="w3-rest">
+                <input type="text" class="w3-input" name="username" id="edit_profile_username" placeholder="Username" required />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fas fa-venus"></i></div>
+            <div class="w3-rest w3-row-padding">
+                <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-black w3-hover-black" onclick="$('#edit_profile_female').addClass('w3-transparent w3-hover-none').removeClass('w3-black w3-hover-black');$(this).removeClass('w3-transparent w3-hover-none').addClass('w3-black w3-hover-black');$('#edit_profile_gender').val('male');" data-ripple="rgba(0, 0, 0, 1)" id="edit_profile_male"><span class="fas fa-male"></span> Male</button></div>
+                <div class="w3-col s6"><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" onclick="$('#edit_profile_male').addClass('w3-transparent w3-hover-none').removeClass('w3-black w3-hover-black');$(this).removeClass('w3-transparent w3-hover-none').addClass('w3-black w3-hover-black');$('#edit_profile_gender').val('female');" data-ripple="rgba(0, 0, 0, 1)" id="edit_profile_female"><span class="fas fa-female"></span> Female</button></div>
+                <input type="hidden" name="gender" id="edit_profile_gender" value="male" />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-calendar"></i></div>
+            <div class="w3-rest">
+                <input type="date" class="w3-input" name="dob" id="edit_profile_dob" required />
+            </div>
+        </div>
+        <div class="w3-row w3-section">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge fa fa-edit"></i></div>
+            <div class="w3-rest">
+                <textarea placeholder="Write something about yourself" class="w3-input" id="edit_profile_about" name="about"></textarea>
+            </div>
+        </div>
+        <div style="display: none;" class="w3-row" id="edit_profile_errorc">
+            <div class="w3-col" style="width:50px;line-height: 3em;text-align: center;"><i class="w3-xlarge w3-text-red fas fa-exclamation-triangle"></i></div>
+            <div class="w3-rest w3-padding w3-red" id="edit_profile_error"></div>
+        </div>
+        <div class="w3-padding-small">
+            <button type="submit" class="w3-button w3-block w3-green w3-hover-shadow w3-hover-green" data-ripple="rgba(255, 255, 255, 1)" id="edit_profile_button">Save <span class="fas fa-check"></span></button><button type="button" class="w3-button w3-block w3-transparent w3-hover-none" style="display: none;cursor: default;" id="edit_profile_loader"><span class="fas fa-spinner fa-spin"></span></button>
+        </div>
+    </form>
+</div>
+<p style="text-align: center"><a href="javascript:void(0)" onclick="loadTmpPage('change_password');">Change Password</a></p>
+<script>
+    $.post(base_url + "/profile/get.php")
+            .done(function (data) {
+                if (data.success) {
+                    Object.assign(userinfo, data.data.user);
+                    updateProfile();
+                    $("#edit_profile_first_name").val(userinfo.first_name);
+                    $("#edit_profile_last_name").val(userinfo.last_name);
+                    $("#edit_profile_email").val(userinfo.email);
+                    $("#edit_profile_username").val(userinfo.username);
+                    if (userinfo['gender'] === 'male') {
+                        $("#edit_profile_male").click();
+                    } else if (userinfo['gender'] === 'female') {
+                        $("#edit_profile_female").click();
+                    }
+                    $("#edit_profile_dob").val(userinfo['dob']);
+                    $("#edit_profile_about").val(userinfo['about']);
+                    $("#edit_profile_content_loader, #edit_profile_form").toggle();
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    $("#edit_profile_content_loader").hide();
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                $("#edit_profile_content_loader").hide();
+            });
+    function save_profile(event) {
+        event.preventDefault();
+        toast('Saving changes...', 1500);
+        $("#edit_profile_button").hide();
+        $("#edit_profile_loader").show();
+        $.post(base_url + '/profile/update.php', $("#edit_profile_form").serialize())
+                .done(function (data) {
+                    if (data.success) {
+                        toast("Changes saved...", 3000);
+                        Object.assign(userinfo, data.data);
+                        updateProfile();
+                        loadPage('profile');
+                    } else if (data.error) {
+                        $("#edit_profile_error").html(data.error);
+                        $("#edit_profile_errorc").show();
+                    } else {
+                        $("#edit_profile_error").html("Unknown error occured. Please contact administrator.");
+                        $("#edit_profile_errorc").show();
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        $("#edit_profile_error").html("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        $("#edit_profile_error").html("Unknown error occured. Please contact administrator.");
+                    }
+                    $("#edit_profile_errorc").show();
+                })
+                .always(function () {
+                    $("#edit_profile_button").show();
+                    $("#edit_profile_loader").hide();
+                });
+    }
+</script>

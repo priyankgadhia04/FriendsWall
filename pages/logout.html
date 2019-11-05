@@ -1,0 +1,7 @@
+<script>
+    localStorage.removeItem('loggedIn');
+    $.post(base_url + '/user/logout.php')
+            .always(function () {
+                window.location.href = base_site_url;
+            });
+</script>

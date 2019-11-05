@@ -1,0 +1,300 @@
+<div id="chat_container">
+    <div class="w3-border-bottom w3-border-top background" style="position: absolute;top: 0;" id="chat_name_container">
+        <img src="" alt="profile picture" style="height: 25px; width: 25px;vertical-align: middle;margin: 5px;" class="w3-circle w3-border" id="chat_name_dp" /><a id="chat_name_link"></a>
+    </div>
+    <div style="overflow: auto;height: 100%;" id="chat_messages_container" onscroll="chat_scroll_action();">
+        <div id="chat_loader" style="text-align: center;" class="w3-padding">
+            <span class="fas fa-spin fa-spinner w3-large"></span><br />
+            loading
+        </div>
+        <div id="chat_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="this.style.display='none';chat_loader.show();load_more_messages();">load more messages</div>
+        <div id="chat_messages"></div>
+    </div>
+    <div class="w3-cell-row w3-border-top" style="position: absolute;bottom: 0;" id="chat_send_container">
+        <div class="w3-cell w3-cell-middle" style="width: 100%;"><textarea style="width: 100%;height: 3em;" class="w3-input" placeholder="Enter message" id="chat_message"></textarea></div>
+        <div class="w3-cell w3-cell-middle"><button class="w3-button w3-transparent w3-hover-none" data-ripple="rgba(0,0,0,1)" onclick="chat_send();"><span class="fas fa-paper-plane"></span></button></div>
+    </div>
+</div>
+<span style="position: fixed;bottom: 0;right: 0;padding: 4px;margin-bottom: 8px;margin-right: 8px;display: none;border-radius: 50% !important;" class="w3-xlarge w3-card-2 w3-red w3-button" id="chat_scroll_down" onclick="chat_messages_container.get(0).scrollTo(0, chat_messages_container.get(0).scrollHeight);"><span class="fas fa-arrow-down"></span></span>
+<script>
+    var chat_username = window.location.hash.split("/")[1];
+    var chat_id;
+    var chat_container = $("#chat_container");
+    var chat_name_container = $("#chat_name_container");
+    var chat_messages_container = $("#chat_messages_container");
+    var chat_messages = $("#chat_messages");
+    var chat_message = $("#chat_message");
+    var chat_load_more = $("#chat_load_more");
+    var chat_load_more_height = chat_load_more.outerHeight(true);
+    var chat_loader = $("#chat_loader");
+    var chat_scroll_down = $("#chat_scroll_down");
+    var chat_first_id;
+    var chat_last_id;
+    function chat_resize() {
+        chat_container.css({"height": size.height(), "margin-top": -(heading.height()+2), "padding-top": heading.height()+2+chat_name_container.height(), "padding-bottom": $("#chat_send_container").height()});
+        $("#chat_send_container").width(chat_container.width());
+        chat_name_container.css({'top': heading.height(), 'width': chat_container.width()});
+        chat_scroll_down.css('bottom', $("#chat_send_container").height());
+        if (window.innerWidth > 992) {
+            chat_scroll_down.css('right', menu['right'].width());
+        } else {
+            chat_scroll_down.css('right', 0);
+        }
+    }
+    $(window).resize(chat_resize);
+    chat_resize();
+    $.post(base_url + "/message/get.php", {'username': chat_username})
+            .done(function (data) {
+                if (data.success) {
+                    chat_id = parseInt(data.data.user.id);
+                    var url;
+                    if (data.data.user.dp === '') {
+                        url = base_site_url + '/api/media/dp/default.jpg';
+                    } else {
+                        url = base_site_url + '/api/media/' + data.data.user.media + '/' + data.data.user.dp + '.jpg';
+                    }
+                    chat_name_container.find('img').attr('src', url);
+                    chat_name_container.find('a').attr('href', '#user/'+data.data.user.username).text(data.data.user.first_name + ' ' + data.data.user.last_name);
+                    chat_resize();
+                    chat_container.attr('id', 'chat_'+chat_id);
+                    chat_loader.hide();
+                    chat_add_multi(data);
+                    chat_messages_container.get(0).scrollTo(0, chat_messages_container.get(0).scrollHeight);
+                    document.cookie = 'with_uid='+chat_id+';';
+                    if (data.data.messages[0]) {
+                        document.cookie = 'last_message_id='+data.data.messages[0].id+';';
+                    } else {
+                        document.cookie = 'last_message_id=0;';
+                        document.cookie = 'first_message_id=0;';
+                    }
+                    if (typeof store['chat'] !== 'undefined' && typeof store['chat']['sse'] !== 'undefined') {
+                        store['chat']['sse'].close();
+                        delete store['chat']['sse'];
+                    }
+                    if (typeof store['chat'] !== 'undefined' && typeof store['chat']['sse_read'] !== 'undefined') {
+                        store['chat']['sse_read'].close();
+                        delete store['chat']['sse_read'];
+                    }
+                    store['chat'] = {'sse': new EventSource(base_url + '/message/sse.php', { 'withCredentials': true }), 'sse_read': new EventSource(base_url + '/message/sse_read.php', { 'withCredentials': true })};
+                    store['chat']['sse'].addEventListener('messageInfo',function(e){
+                        if (!chat_container.parent().is(':visible')) {
+                            store['chat']['sse'].close();
+                            delete store['chat']['sse'];
+                            return 0;
+                        }
+                        var chat_scroll = false;
+                        if ((chat_messages_container[0].scrollTop + chat_messages_container[0].clientHeight) >= (chat_messages_container[0].scrollHeight - (chat_load_more_height / 2))) {
+                            chat_scroll = true;
+                        }
+                        var tData = JSON.parse(e.data);
+                        for (var i=0; i<tData.length; i++) {
+                            if (parseInt(tData[i].sender) === userinfo['id']) {
+                                chat_add('sent', 'bottom', tData[i]);
+                            } else {
+                                chat_add('received', 'bottom', tData[i]);
+                                if (parseInt(tData[i].isread) === 0) {
+                                    $.post(base_url + "/message/read.php", {'id': tData[i].id});
+                                }
+                            }
+                            document.cookie = 'last_message_id='+tData[i].id+';';
+                        }
+                        if (typeof store['chat'] !== 'undefined' && typeof store['chat']['sse_read'] !== 'undefined') {
+                            store['chat']['sse_read'].close();
+                            delete store['chat']['sse_read'];
+                            store['chat']['sse_read'] = new EventSource(base_url + '/message/sse_read.php', { 'withCredentials': true });
+                            store['chat']['sse_read'].addEventListener('readInfo',sse_reader,false);
+                        }
+                        if (chat_scroll) {
+                            chat_messages_container.get(0).scrollTo(0, chat_messages_container.get(0).scrollHeight);
+                        } else {
+                            chat_scroll_down.width(chat_scroll_down.height());
+                            chat_scroll_down.show();
+                        }
+                    },false);
+                    store['chat']['sse_read'].addEventListener('readInfo',sse_reader,false);
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                    loadPage("messages");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                    loadPage("messages");
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+                loadPage("messages");
+            });
+            
+    function chat_send() {
+        var message = chat_message.val();
+        chat_message.val('');
+        chat_message.focus();
+        $.post(base_url + "/message/send.php", {'id': chat_id, 'text': message})
+            .done(function (data) {
+                if (data.success) {
+                } else if (data.error) {
+                    toast(data.error);
+                    if (data.logout) {
+                        loadPage('logout');
+                    }
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+            })
+            .fail(function (error) {
+                if (error.status === 0) {
+                    toast("Unknown error occured. Make sure you have working internet connection.");
+                } else {
+                    toast("Unknown error occured. Please contact administrator.");
+                }
+            });
+    }
+    function load_more_messages() {
+        $.post(base_url + "/message/get.php", {'id': chat_id, 'from': chat_last_id})
+                .done(function (data) {
+                    if (data.success) {
+                        var preHeight = chat_messages_container[0].scrollHeight;
+                        chat_loader.hide();
+                        chat_add_multi(data);
+                        chat_messages_container.scrollTop(chat_messages_container[0].scrollHeight - preHeight);
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function message_delete(id) {
+        $.post(base_url + "/message/delete.php", {'id': id})
+                .done(function (data) {
+                    if (data.success) {
+                        $("#message_"+id).remove();
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status === 0) {
+                        toast("Unknown error occured. Make sure you have working internet connection.");
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    function chat_add_multi(data) {
+        var tMessages = data.data.messages;
+        if (tMessages.length < 20) {
+            chat_load_more.hide();
+        } else {
+            chat_load_more.show();
+        }
+        for (var i=0; i<tMessages.length; i++) {
+            if (parseInt(tMessages[i].sender) === userinfo['id']) {
+                chat_add('sent', 'top', tMessages[i]);
+            } else {
+                chat_add('received', 'top', tMessages[i]);
+                if (parseInt(tMessages[i].isread) === 0) {
+                    $.post(base_url + "/message/read.php", {'id': tMessages[i].id});
+                }
+            }
+            document.cookie = 'first_message_id='+tMessages[i].id+';';
+            chat_last_id = parseInt(tMessages[i].id);
+        }
+        if (typeof store['chat'] !== 'undefined' && typeof store['chat']['sse_read'] !== 'undefined') {
+            store['chat']['sse_read'].close();
+            delete store['chat']['sse_read'];
+            store['chat']['sse_read'] = new EventSource(base_url + '/message/sse_read.php', { 'withCredentials': true });
+            store['chat']['sse_read'].addEventListener('readInfo',sse_reader,false);
+        }
+    }
+    function chat_add(type, position, msg) {
+        var align = 'right';
+        var color = 'w3-pale-green';
+        var boldStyle = '';
+        if (type === 'received') {
+            align = 'left';
+            color = 'background';
+        } else {
+            if (parseInt(msg.isread) === 0) {
+                boldStyle = 'font-weight:bold;';
+            }
+        }
+        var innerText = $('<div />').text(msg.text);
+        var str = '<div style="margin: 8px 0px !important;padding:0px 8px;'+boldStyle+'" class="w3-container" id="message_'+msg.id+'"><span style="max-width:80%;word-wrap: break-word;white-space: pre-wrap;" class="message w3-padding-small border-bottom w3-card-2 w3-'+align+' '+color+'">'+innerText.html()+'</span><span class="w3-'+align+' w3-padding-small w3-tiny"  id="message_date_time_'+msg.id+'" style="color:rgba(255,255,255,.7);">'+mysqlGmtStrToJSLocalTime(msg.time)+'</span><span class="w3-'+align+' w3-padding-small w3-tiny" id="message_date_full_'+msg.id+'" style="color:rgba(255,255,255,.7);display:none;">'+mysqlGmtStrToJSLocal(msg.time)+'</span><span class="w3-'+align+' w3-padding-small" style="display:none;" id="message_action_'+msg.id+'" onclick="message_delete('+msg.id+');"><span style="background-color:transparent;color:rgba(255,255,255,.7);cursor:pointer" data-ripple="rgba(0,0,0,1)" class="fas fa-trash"></span></span></div>';
+        if (position === 'top') {
+            chat_messages.prepend(str);
+        } else if (position === 'bottom') {
+            chat_messages.append(str);
+        }
+        $('#message_'+msg.id).hover(function() {
+            $('#message_action_'+$(this).attr('id').substring(8)).show();
+            $('#message_date_full_'+$(this).attr('id').substring(8)).show();
+            $('#message_date_time_'+$(this).attr('id').substring(8)).hide();
+        }, function() {
+            $('#message_action_'+$(this).attr('id').substring(8)).hide();
+            $('#message_date_full_'+$(this).attr('id').substring(8)).hide();
+            $('#message_date_time_'+$(this).attr('id').substring(8)).show();
+        });
+    }
+    function mysqlGmtStrToJSDate(str) {
+
+        var t = str.split(/[- :]/);
+
+        // Apply each element to the Date function
+        return new Date(t[0], t[1]-1, t[2], t[3], t[4], t[5]);
+
+    }
+    function mysqlGmtStrToJSLocalTime(str) {
+        // first create str to Date object
+        var g = mysqlGmtStrToJSDate(str);
+        // 
+        return (new Date(g.getTime())).toLocaleTimeString();
+    }
+    function mysqlGmtStrToJSLocal(str) {
+        // first create str to Date object
+        var g = mysqlGmtStrToJSDate(str);
+        // 
+        return (new Date(g.getTime())).toLocaleString();
+    }
+    function chat_scroll_action() {
+        if (chat_load_more.is(':visible') && chat_messages_container[0].scrollTop <= (chat_load_more_height / 2)) {
+            chat_load_more.click();
+        }
+        if ((chat_messages_container[0].scrollTop + chat_messages_container[0].clientHeight) >= (chat_messages_container[0].scrollHeight - (chat_load_more_height / 2))) {
+            chat_scroll_down.hide();
+        }
+    }
+    function sse_reader(e){
+        if (!chat_container.parent().is(':visible')) {
+            store['chat']['sse_read'].close();
+            delete store['chat']['sse_read'];
+            return 0;
+        }
+        var tData = JSON.parse(e.data);
+        for (var i=0; i<tData.length; i++) {
+            $("#message_"+tData[i].id).css("font-weight", parseInt(tData[i].isread) === 1 ? "normal":"bold");
+        }
+    }
+</script>

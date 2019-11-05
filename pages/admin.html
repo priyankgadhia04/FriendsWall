@@ -1,0 +1,100 @@
+<div class="w3-padding-small">
+    <input type="text" class="w3-input" placeholder="Search" onkeyup="admin_search_page=1;admin_search(false);" id="admin_search_input" />
+</div>
+<div id="admin_search_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="admin_search_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="admin_search_page++;admin_search(true);">load more results</div>
+<script>
+    if (userinfo && !userinfo['isadmin']) {
+        toast("Access denied");
+        loadPage('walls');
+    }
+    var admin_search_input = $("#admin_search_input");
+    var admin_search_result = $("#admin_search_result");
+    var admin_search_load_more = $("#admin_search_load_more");
+    var admin_search_page = 1;
+    var admin_search_post = '';
+    function admin_search(load_more) {
+        if(admin_search_post !== '') {
+            admin_search_post.abort();
+        }
+        if (admin_search_input.val()) {
+            admin_search_post = $.post(base_url + "/admin/search.php", {'string': admin_search_input.val(),'page': admin_search_page})
+                    .done(function (data) {
+                        if (data.success) {
+                            var url;
+                            if (!load_more) {
+                                admin_search_result.empty();
+                            }
+                            for (var i=0; i<data.data.result.length; i++) {
+                                if (data.data.result[i].dp === '') {
+                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                } else {
+                                    url = base_site_url + '/api/media/' + data.data.result[i].media + '/' + data.data.result[i].dp + '.jpg';
+                                }
+                                admin_search_result.append('<div style="padding-top:8px;" id="admin_search_'+data.data.result[i].id+'"><button class="w3-right w3-button w3-red w3-hover-red suspend" style="margin-top:8px;margin-right:8px;display:none;" data-ripple="rgba(0,0,0,1)" onclick="admin_user_action(\''+data.data.result[i].id+'\', \'suspend\')">Suspend</button><button class="w3-right w3-button w3-green w3-hover-green reactivate" style="margin-top:8px;margin-right:8px;display:none;" data-ripple="rgba(0,0,0,1)" onclick="admin_user_action(\''+data.data.result[i].id+'\', \'reactivate\')">Reactivate</button><span class="fas fa-spin fa-spinner w3-right w3-large loader" style="margin-top:8px;margin-right:8px;display:none;"></span><a class="border-bottom w3-card-2 w3-block background" href="#user/' + data.data.result[i].username + '" style="text-decoration:none;padding:8px;" data-ripple="rgba(0,0,0,1)"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border" style="vertical-align: middle;" />&nbsp;&nbsp;&nbsp;' + data.data.result[i].first_name + ' ' + data.data.result[i].last_name + '</a></div>');
+                                if (parseInt(data.data.result[i].isactive) === 1) {
+                                    $('#admin_search_'+data.data.result[i].id+' .suspend').show();
+                                } else {
+                                    $('#admin_search_'+data.data.result[i].id+' .reactivate').show();
+                                }
+                            }
+                            if(data.data.result.length === 0) {
+                                if (load_more) {
+                                    toast("no more result found");
+                                } else {
+                                    admin_search_result.html('<div class="w3-red w3-center w3-padding">No result found</div>');
+                                }
+                                admin_search_load_more.hide();
+                            } else if(data.data.result.length < 10) {
+                                admin_search_load_more.hide();
+                            } else {
+                                admin_search_load_more.show();
+                            }
+                        } else if (data.error) {
+                            toast(data.error);
+                            if (data.logout) {
+                                loadPage('logout');
+                            }
+                        } else {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    })
+                    .fail(function (error) {
+                        if (error.status !== 0) {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    });
+        } else {
+            admin_search_result.empty();
+            admin_search_load_more.hide();
+        }
+    }
+    function admin_user_action(id, action) {
+        $('#admin_search_'+id+' .reactivate').hide();
+        $('#admin_search_'+id+' .suspend').hide();
+        $('#admin_search_'+id+' .loader').show();
+        $.post(base_url + "/admin/"+action+"_user.php", {'id': id})
+                .done(function (data) {
+                    if (data.success) {
+                        $('#admin_search_'+id+' .loader').hide();
+                        if (action === 'suspend') {
+                            $('#admin_search_'+id+' .reactivate').show();
+                        } else {
+                            $('#admin_search_'+id+' .suspend').show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+</script>

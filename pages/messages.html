@@ -1,0 +1,135 @@
+<div style="text-align: right"><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="show_new_chat();" style="margin-right: 0px !important;" id="messages_new_chat_button"><span class="fa fa-plus"></span> New chat</button><button class="w3-button w3-black w3-hover-black w3-margin" data-ripple="rgba(255,255,255,1)" onclick="toast('Refreshing...', 2000);chats_page=1;chats_load();"><span class="fa fa-sync"></span> Refresh</button></div>
+<div id="chats_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div>
+<div id="chats_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="chats_page++;chats_load(true);">load more messages</div>
+<script>
+    var new_chat_search_input;
+    var new_chat_search_result;
+    var new_chat_search_load_more;
+    var new_chat_search_page = 1;
+    var new_chat_search_post = '';
+    var chats_result = $("#chats_result");
+    var chats_load_more = $("#chats_load_more");
+    var chats_page = 1;
+    function show_new_chat() {
+        var clone = windowDiv.clone().removeAttr('id');
+        clone.find('.window-title').text('New chat').css({'margin':'8px', 'margin-left': '0px'});;
+        clone.appendTo(document.body).show();
+        clone.find('.window-header').css({'position':'absolute', width: clone.find('.window-content').css('width')}).addClass('background-image');
+
+        var new_chat_result = clone.find('.window-main');
+        new_chat_result.css('margin-top', clone.find('.window-header').height());
+        new_chat_result.html('<div class="w3-padding-small"><input type="text" class="w3-input" placeholder="Search" onkeyup="new_chat_search_page=1;new_chat_search(false);" id="new_chat_search_input" /></div><div id="new_chat_search_result" style="padding-left:8px;padding-right:8px;padding-bottom: 8px;"></div><div id="new_chat_search_load_more" style="margin:8px;cursor: pointer;display: none;" data-ripple="rgba(0,0,0,1)" class="background w3-padding-small w3-center w3-card-2 border-bottom" onclick="new_chat_search_page++;new_chat_search(true);">load more results</div>');
+        new_chat_search_input = $("#new_chat_search_input");
+        new_chat_search_result = $("#new_chat_search_result");
+        new_chat_search_load_more = $("#new_chat_search_load_more");
+    }
+    function new_chat_search(load_more) {
+        if(new_chat_search_post !== '') {
+            new_chat_search_post.abort();
+        }
+        if (new_chat_search_input.val()) {
+            new_chat_search_post = $.post(base_url + "/friends.php", {'search_string': new_chat_search_input.val(),'page': new_chat_search_page})
+                    .done(function (data) {
+                        if (data.success) {
+                            var url;
+                            if (!load_more) {
+                                new_chat_search_result.empty();
+                            }
+                            for (var i=0; i<data.data.result.length; i++) {
+                                if (data.data.result[i].dp === '') {
+                                    url = base_site_url + '/api/media/dp/default.jpg';
+                                } else {
+                                    url = base_site_url + '/api/media/' + data.data.result[i].media + '/' + data.data.result[i].dp + '.jpg';
+                                }
+                                new_chat_search_result.append('<div style="padding-top:8px;"><div class="w3-cell-row w3-card-2 background border-bottom"><div class="w3-cell w3-padding-small" style="width:100%;"><img src="' + url + '" height="50" width="50" style="vertical-align:middle;margin:0px;" class="w3-circle w3-border" />&nbsp;&nbsp;&nbsp;<a href="#user/' + data.data.result[i].username + '">' + data.data.result[i].first_name + ' ' + data.data.result[i].last_name +'</a></div><div class="w3-cell"><a class="w3-small w3-button w3-black w3-hover-black" data-ripple="rgba(255,255,255,1)" href="#chat/'+data.data.result[i].username+'" style="margin-right:8px;">Start</a></div></div></div>');
+                            }
+                            if(data.data.result.length === 0) {
+                                if (load_more) {
+                                    toast("no more result found");
+                                } else {
+                                    new_chat_search_result.html('<div class="w3-red w3-center w3-padding">No result found</div>');
+                                }
+                                new_chat_search_load_more.hide();
+                            } else if(data.data.result.length < 10) {
+                                new_chat_search_load_more.hide();
+                            } else {
+                                new_chat_search_load_more.show();
+                            }
+                        } else if (data.error) {
+                            toast(data.error);
+                            if (data.logout) {
+                                loadPage('logout');
+                            }
+                        } else {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    })
+                    .fail(function (error) {
+                        if (error.status !== 0) {
+                            toast("Unknown error occured. Please contact administrator.");
+                        }
+                    });
+        } else {
+            new_chat_search_result.empty();
+            new_chat_search_load_more.hide();
+        }
+    }
+    function chats_load(load_more) {
+        $.post(base_url + "/message/get_chats.php", {'page': chats_page})
+                .done(function (data) {
+                    if (data.success) {
+                        var url;
+                        if (!load_more) {
+                            chats_result.empty();
+                        }
+                        var chats_added = {};
+                        for (var i=0; i<data.data.chats.length; i++) {
+                            var sender_indicator = '';
+                            var issender = false;
+                            if (parseInt(data.data.chats[i].sender) === userinfo['id']) {
+                                issender = true;
+                                sender_indicator = 'you: ';
+                            }
+                            var did = issender ? data.data.chats[i].receiver : data.data.chats[i].sender;
+                            if (chats_added[data.data.users[did].id] === true) {
+                                continue;
+                            } else {
+                                chats_added[data.data.users[did].id] = true;
+                            }
+                            if (data.data.users[did].dp === '') {
+                                url = base_site_url + '/api/media/dp/default.jpg';
+                            } else {
+                                url = base_site_url + '/api/media/' + data.data.users[did].media + '/' + data.data.users[did].dp + '.jpg';
+                            }
+                            var innerText = $('<div />').text(sender_indicator + data.data.chats[i].text);
+                            chats_result.append('<div style="padding-top:8px;'+((parseInt(data.data.chats[i].isread)===0 && !issender)?'font-weight:bold;':'')+'"><div class="border-bottom w3-card-2 w3-block background" data-ripple="rgba(0,0,0,1)" style="padding:8px;white-space: nowrap; overflow: hidden; text-overflow: ellipsis;cursor:pointer;" onclick="if(window.location.href.indexOf(\'user\') === -1){window.location.href=\'#chat/'+data.data.users[did].username+'\';}"><img src="' + url + '" height="50" width="50" class="w3-circle w3-border w3-left" style="display:inline-block;margin-right:8px;" /><a class="link" onclick="event.stopPropagation();window.location.href = \'#user/' + data.data.users[did].username + '\';" href="#user/' + data.data.users[did].username + '">' + data.data.users[did].first_name + ' ' + data.data.users[did].last_name + '</a><br />'+innerText.html()+'<div class="w3-right w3-tiny">'+(new Date(data.data.chats[i].time)).toLocaleString()+'</div></div></div>');
+                        }
+                        if(data.data.chats.length === 0) {
+                            if (load_more) {
+                                toast("no more chats found");
+                            } else {
+                                chats_result.html('<div class="w3-red w3-center w3-padding">No chats</div>');
+                            }
+                            chats_load_more.hide();
+                        } else if(data.data.chats.length < 20) {
+                            chats_load_more.hide();
+                        } else {
+                            chats_load_more.show();
+                        }
+                    } else if (data.error) {
+                        toast(data.error);
+                        if (data.logout) {
+                            loadPage('logout');
+                        }
+                    } else {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                })
+                .fail(function (error) {
+                    if (error.status !== 0) {
+                        toast("Unknown error occured. Please contact administrator.");
+                    }
+                });
+    }
+    chats_load();
+</script>
